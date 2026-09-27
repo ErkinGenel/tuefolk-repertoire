@@ -24,6 +24,12 @@ const IconMusic = ({ className }) => (
     </svg>
 );
 
+const IconLock = ({ className }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002-2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+    </svg>
+);
+
 class Metronome {
     constructor() {
         this.audioCtx = null;
@@ -85,7 +91,15 @@ class Metronome {
 const metronomeEngine = new Metronome();
 
 const App = () => {
-    // State
+    // Authentication State (Set your desired password here!)
+    const CORRECT_PASSWORD = "folk"; // You can change this password anytime
+    const [isAuthenticated, setIsAuthenticated] = useState(() => {
+        return sessionStorage.getItem('folkAuth') === 'true';
+    });
+    const [passwordInput, setPasswordInput] = useState('');
+    const [loginError, setLoginError] = useState(false);
+
+    // Repertoire State
     const [sheets, setSheets] = useState([]);
     const [activeId, setActiveId] = useState(null);
     const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
@@ -110,31 +124,41 @@ const App = () => {
 
     const activeSheet = displayedSheets[activeIndex];
 
-    // Load images natively from the Vite bundler instead of GitHub API
-    useEffect(() => {
-        const savedFavs = JSON.parse(localStorage.getItem('folkFavorites') || '[]');
+    // Handle Login Submit
+    const handleLogin = (e) => {
+        e.preventDefault();
+        if (passwordInput === CORRECT_PASSWORD) {
+            setIsAuthenticated(true);
+            sessionStorage.setItem('folkAuth', 'true');
+            setLoginError(false);
+        } else {
+            setLoginError(true);
+            setPasswordInput('');
+        }
+    };
 
-        // Vite magically processes all images in this folder at build time. 
-        // No network requests needed to find out what files exist!
+    // Load images natively from the Vite bundler
+    useEffect(() => {
+        if (!isAuthenticated) return;
+
+        const savedFavs = JSON.parse(localStorage.getItem('folkFavorites') || '[]');
         const imageModules = import.meta.glob('./assets/images/*.{png,jpg,jpeg,gif,webp}', { eager: true, import: 'default' });
         
         const loadedSheets = Object.entries(imageModules).map(([path, url]) => {
             const filename = path.split('/').pop();
-            const name = filename.replace(/\.[^/.]+$/, ""); // Remove extension for display
+            const name = filename.replace(/\.[^/.]+$/, "");
             return {
                 id: filename,
                 name: name,
-                url: url, // This is the compiled URL Vite provides
+                url: url,
                 isFavorite: savedFavs.includes(filename)
             };
         });
 
-        // Sort alphabetically
         loadedSheets.sort((a, b) => a.name.localeCompare(b.name));
-
         setSheets(loadedSheets);
         if (loadedSheets.length > 0) setActiveId(loadedSheets[0].id);
-    }, []);
+    }, [isAuthenticated]);
 
     const goNext = () => {
         if (displayedSheets.length === 0) return;
@@ -161,13 +185,14 @@ const App = () => {
 
     // Keyboard navigation
     useEffect(() => {
+        if (!isAuthenticated) return;
         const handleKeyDown = (e) => {
             if (e.key === 'ArrowRight') goNext();
             if (e.key === 'ArrowLeft') goPrev();
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [activeIndex, displayedSheets.length]);
+    }, [isAuthenticated, activeIndex, displayedSheets.length]);
 
     // Touch Swipe logic
     const handleTouchStart = (e) => { touchStartX.current = e.targetTouches[0].clientX; };
@@ -197,8 +222,45 @@ const App = () => {
         metronomeEngine.setBpm(newBpm);
     };
 
-    // Cleanup metronome on unmount
     useEffect(() => { return () => metronomeEngine.stop(); }, []);
+
+    // If not logged in, render password prompt
+    if (!isAuthenticated) {
+        return (
+            <div className="h-screen w-screen flex items-center justify-center bg-gray-950 text-gray-100 font-sans p-4">
+                <div className="max-w-md w-full bg-gray-900 border border-gray-800 rounded-2xl p-8 shadow-2xl flex flex-col items-center">
+                    <div className="w-16 h-16 bg-blue-600/20 text-blue-400 rounded-2xl flex items-center justify-center mb-6 border border-blue-500/30">
+                        <IconLock className="w-8 h-8" />
+                    </div>
+                    <h1 className="text-2xl font-bold tracking-tight mb-2">FolkRepertoire</h1>
+                    <p className="text-gray-400 text-sm text-center mb-6">Enter your password to access the sheet music collection.</p>
+
+                    <form onSubmit={handleLogin} className="w-full space-y-4">
+                        <div>
+                            <input 
+                                type="password" 
+                                placeholder="Password" 
+                                value={passwordInput}
+                                onChange={(e) => setPasswordInput(e.target.value)}
+                                className={`w-full px-4 py-3 bg-gray-950 border rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 transition-all ${loginError ? 'border-red-500 focus:ring-red-500' : 'border-gray-800 focus:ring-blue-500'}`}
+                                autoFocus
+                            />
+                            {loginError && (
+                                <p className="text-xs text-red-400 mt-2 ml-1">Incorrect password. Please try again.</p>
+                            )}
+                        </div>
+
+                        <button 
+                            type="submit"
+                            className="w-full py-3 bg-blue-600 hover:bg-blue-500 active:scale-[0.98] transition-all font-semibold rounded-xl text-white shadow-lg shadow-blue-600/20"
+                        >
+                            Unlock Repertoire
+                        </button>
+                    </form>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="h-screen w-screen flex flex-col bg-gray-900 text-gray-100 font-sans">
