@@ -30,6 +30,24 @@ const IconLock = ({ className }) => (
     </svg>
 );
 
+const IconMenu = ({ className }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16"></path>
+    </svg>
+);
+
+const IconX = ({ className }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"></path>
+    </svg>
+);
+
+const IconSearch = ({ className }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"></path>
+    </svg>
+);
+
 class Metronome {
     constructor() {
         this.audioCtx = null;
@@ -91,8 +109,8 @@ class Metronome {
 const metronomeEngine = new Metronome();
 
 const App = () => {
-    // Authentication State (Set your desired password here!)
-    const CORRECT_PASSWORD = "folk"; // You can change this password anytime
+    // Authentication State
+    const CORRECT_PASSWORD = "folk"; 
     const [isAuthenticated, setIsAuthenticated] = useState(() => {
         return sessionStorage.getItem('folkAuth') === 'true';
     });
@@ -102,6 +120,10 @@ const App = () => {
     // Repertoire State
     const [sheets, setSheets] = useState([]);
     const [activeId, setActiveId] = useState(null);
+    
+    // Sidebar / Menu State
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
     const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
     
     // Metronome State
@@ -112,17 +134,31 @@ const App = () => {
     const touchStartX = useRef(0);
     const touchEndX = useRef(0);
 
-    // Derived state
+    // Derived state: Filtered sheets based on search AND favorites
     const displayedSheets = useMemo(() => {
-        if (showFavoritesOnly) return sheets.filter(s => s.isFavorite);
-        return sheets;
-    }, [sheets, showFavoritesOnly]);
+        let result = sheets;
+        if (showFavoritesOnly) {
+            result = result.filter(s => s.isFavorite);
+        }
+        if (searchQuery.trim() !== '') {
+            const query = searchQuery.toLowerCase();
+            result = result.filter(s => s.name.toLowerCase().includes(query));
+        }
+        return result;
+    }, [sheets, showFavoritesOnly, searchQuery]);
 
     const activeIndex = useMemo(() => {
         return displayedSheets.findIndex(s => s.id === activeId);
     }, [displayedSheets, activeId]);
 
     const activeSheet = displayedSheets[activeIndex];
+
+    // Auto-select first item if the current one gets filtered out via search/favorites
+    useEffect(() => {
+        if (displayedSheets.length > 0 && activeIndex === -1 && isAuthenticated) {
+            setActiveId(displayedSheets[0].id);
+        }
+    }, [displayedSheets, activeIndex, isAuthenticated]);
 
     // Handle Login Submit
     const handleLogin = (e) => {
@@ -187,12 +223,13 @@ const App = () => {
     useEffect(() => {
         if (!isAuthenticated) return;
         const handleKeyDown = (e) => {
+            if (isMenuOpen) return; // Disable arrow keys when typing in search menu
             if (e.key === 'ArrowRight') goNext();
             if (e.key === 'ArrowLeft') goPrev();
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [isAuthenticated, activeIndex, displayedSheets.length]);
+    }, [isAuthenticated, activeIndex, displayedSheets.length, isMenuOpen]);
 
     // Touch Swipe logic
     const handleTouchStart = (e) => { touchStartX.current = e.targetTouches[0].clientX; };
@@ -224,7 +261,6 @@ const App = () => {
 
     useEffect(() => { return () => metronomeEngine.stop(); }, []);
 
-    // If not logged in, render password prompt
     if (!isAuthenticated) {
         return (
             <div className="h-screen w-screen flex items-center justify-center bg-gray-950 text-gray-100 font-sans p-4">
@@ -263,44 +299,122 @@ const App = () => {
     }
 
     return (
-        <div className="h-screen w-screen flex flex-col bg-gray-900 text-gray-100 font-sans">
+        <div className="h-screen w-screen flex flex-col bg-gray-900 text-gray-100 font-sans overflow-hidden">
+            
+            {/* Dark Overlay when Sidebar is Open */}
+            {isMenuOpen && (
+                <div 
+                    className="fixed inset-0 bg-black/60 z-40 backdrop-blur-sm transition-opacity" 
+                    onClick={() => setIsMenuOpen(false)}
+                ></div>
+            )}
+
+            {/* Sidebar Drawer */}
+            <div className={`fixed inset-y-0 left-0 w-80 max-w-[85vw] bg-gray-900 border-r border-gray-800 z-50 transform transition-transform duration-300 flex flex-col shadow-2xl ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+                <div className="p-4 border-b border-gray-800 flex justify-between items-center bg-gray-900 shrink-0">
+                    <h2 className="text-lg font-bold text-gray-100 flex items-center gap-2">
+                        <IconMusic className="w-5 h-5 text-blue-500" />
+                        Song List
+                    </h2>
+                    <button onClick={() => setIsMenuOpen(false)} className="p-2 text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors">
+                        <IconX className="w-5 h-5" />
+                    </button>
+                </div>
+                
+                <div className="p-4 border-b border-gray-800 space-y-4 bg-gray-900/50 shrink-0">
+                    <div className="relative">
+                        <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                        <input 
+                            type="text" 
+                            placeholder="Search repertoire..." 
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full bg-gray-950 border border-gray-700 rounded-lg py-2.5 pl-9 pr-4 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all shadow-inner"
+                        />
+                        {searchQuery && (
+                            <button 
+                                onClick={() => setSearchQuery('')}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
+                            >
+                                <IconX className="w-4 h-4" />
+                            </button>
+                        )}
+                    </div>
+                    
+                    <label className="flex items-center space-x-2 text-sm text-gray-300 cursor-pointer select-none w-max">
+                        <input 
+                            type="checkbox" 
+                            checked={showFavoritesOnly} 
+                            onChange={(e) => setShowFavoritesOnly(e.target.checked)} 
+                            className="w-4 h-4 rounded bg-gray-900 border-gray-700 text-blue-500 focus:ring-blue-500 focus:ring-offset-gray-900 cursor-pointer" 
+                        />
+                        <span>Show Favorites Only</span>
+                    </label>
+                </div>
+
+                <div className="flex-1 overflow-y-auto hide-scrollbar p-3 space-y-1 bg-gray-950/30">
+                    {displayedSheets.length === 0 ? (
+                        <div className="text-center text-gray-500 text-sm mt-8 flex flex-col items-center">
+                            <IconSearch className="w-8 h-8 mb-2 opacity-20" />
+                            No matching songs found.
+                        </div>
+                    ) : (
+                        displayedSheets.map(sheet => (
+                            <button
+                                key={sheet.id}
+                                onClick={() => {
+                                    setActiveId(sheet.id);
+                                    if (window.innerWidth < 768) setIsMenuOpen(false); // Auto-close on mobile
+                                }}
+                                className={`w-full text-left px-3 py-2.5 rounded-lg flex items-center justify-between group transition-colors ${activeId === sheet.id ? 'bg-blue-600/20 text-blue-400 font-medium border border-blue-500/30' : 'text-gray-300 hover:bg-gray-800 hover:text-white border border-transparent'}`}
+                            >
+                                <span className="truncate pr-2 text-sm">{sheet.name}</span>
+                                {sheet.isFavorite && <IconHeart solid={true} className={`w-4 h-4 shrink-0 ${activeId === sheet.id ? 'text-blue-400' : 'text-red-500 opacity-60 group-hover:opacity-100'}`} />}
+                            </button>
+                        ))
+                    )}
+                </div>
+                
+                <div className="p-3 border-t border-gray-800 text-xs font-mono text-gray-500 text-center bg-gray-900 shrink-0">
+                    {displayedSheets.length} {displayedSheets.length === 1 ? 'RESULT' : 'RESULTS'}
+                </div>
+            </div>
+
             {/* Header Bar */}
-            <div className="h-16 shrink-0 bg-gray-800 border-b border-gray-700 flex items-center justify-between px-4 z-20 shadow-md">
-                <div className="flex items-center space-x-4">
-                    <h1 className="font-bold text-lg hidden sm:block text-blue-400">Repertoire</h1>
+            <div className="h-16 shrink-0 bg-gray-800 border-b border-gray-700 flex items-center justify-between px-3 sm:px-4 z-20 shadow-md">
+                <div className="flex items-center space-x-3">
+                    <button 
+                        onClick={() => setIsMenuOpen(true)}
+                        className="p-2 -ml-1 text-gray-300 hover:text-white hover:bg-gray-700 rounded-lg transition-colors active:scale-95"
+                    >
+                        <IconMenu className="w-6 h-6" />
+                    </button>
+                    
+                    <h1 className="font-bold text-lg hidden sm:block text-blue-400 truncate">Repertoire</h1>
 
                     <button 
-                        onClick={() => {
-                            const newFavState = !showFavoritesOnly;
-                            setShowFavoritesOnly(newFavState);
-                            if (newFavState && activeSheet && !activeSheet.isFavorite) {
-                                const firstFav = sheets.find(s => s.isFavorite);
-                                setActiveId(firstFav ? firstFav.id : null);
-                            } else if (!newFavState && !activeId && sheets.length > 0) {
-                                setActiveId(sheets[0].id);
-                            }
-                        }}
-                        className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg transition-colors ${showFavoritesOnly ? 'bg-red-900/40 text-red-400' : 'bg-gray-700 hover:bg-gray-600 text-gray-300'}`}
+                        onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+                        className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg transition-colors border ${showFavoritesOnly ? 'bg-red-900/30 text-red-400 border-red-500/30' : 'bg-gray-700/50 hover:bg-gray-600 border-transparent text-gray-300'}`}
                     >
                         <IconHeart solid={showFavoritesOnly} className="w-5 h-5" />
-                        <span className="text-sm font-medium hidden sm:block">Favorites</span>
+                        <span className="text-sm font-medium hidden md:block">Favorites</span>
                     </button>
                 </div>
 
                 {/* Metronome Controls */}
-                <div className="flex items-center bg-gray-900/50 rounded-xl p-1 px-3 border border-gray-700">
+                <div className="flex items-center bg-gray-900/60 rounded-xl p-1 px-3 border border-gray-700 shadow-inner">
                     <button 
                         onClick={toggleMetronome}
-                        className={`w-8 h-8 flex items-center justify-center rounded-lg mr-3 transition-colors ${metroPlaying ? 'bg-green-600 text-white animate-pulse' : 'bg-gray-700 hover:bg-gray-600 text-gray-300'}`}
+                        className={`w-8 h-8 flex items-center justify-center rounded-lg mr-3 transition-all ${metroPlaying ? 'bg-green-600 text-white shadow-[0_0_15px_rgba(22,163,74,0.5)]' : 'bg-gray-700 hover:bg-gray-600 text-gray-300'}`}
                     >
                         {metroPlaying ? (
-                            <div className="w-3 h-3 bg-white rounded-sm"></div>
+                            <div className="w-3 h-3 bg-white rounded-sm animate-pulse"></div>
                         ) : (
                             <svg className="w-4 h-4 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                         )}
                     </button>
-                    <div className="flex flex-col w-24 sm:w-32">
-                        <div className="flex justify-between text-xs text-gray-400 font-mono mb-1">
+                    <div className="flex flex-col w-20 sm:w-32">
+                        <div className="flex justify-between text-[10px] sm:text-xs text-gray-400 font-mono mb-1">
                             <span>BPM</span>
                             <span className="font-bold text-gray-200">{bpm}</span>
                         </div>
@@ -319,7 +433,7 @@ const App = () => {
                     <div className="text-gray-500 flex flex-col items-center">
                         <IconMusic className="w-16 h-16 mb-4 opacity-20" />
                         <p>No sheets found in this view.</p>
-                        <p className="text-xs mt-2">Make sure you put images in `src/assets/images/`</p>
+                        {searchQuery && <p className="text-sm mt-2 text-gray-600">Try clearing your search.</p>}
                     </div>
                 ) : (
                     <>
@@ -353,7 +467,7 @@ const App = () => {
                                 />
                                 
                                 <div className="absolute top-4 right-4 sm:top-6 sm:right-6 bg-gray-900/80 backdrop-blur-md px-4 py-2 rounded-xl flex items-center space-x-3 border border-gray-700/50 shadow-2xl">
-                                    <span className="font-semibold text-sm max-w-[200px] sm:max-w-md truncate">{activeSheet.name}</span>
+                                    <span className="font-semibold text-sm max-w-[150px] sm:max-w-md truncate">{activeSheet.name}</span>
                                     <button 
                                         onClick={(e) => { e.stopPropagation(); toggleFavorite(activeSheet.id); }}
                                         className={`p-1.5 rounded-full transition-transform active:scale-90 ${activeSheet.isFavorite ? 'text-red-500 bg-red-500/10' : 'text-gray-400 hover:text-white hover:bg-gray-700'}`}
@@ -368,20 +482,20 @@ const App = () => {
             </div>
 
             {/* Bottom Thumbnail Strip */}
-            <div className="h-28 shrink-0 bg-gray-900 border-t border-gray-800 p-2 overflow-x-auto hide-scrollbar flex items-center space-x-3 shadow-[0_-10px_20px_rgba(0,0,0,0.3)]">
+            <div className="h-24 sm:h-28 shrink-0 bg-gray-900 border-t border-gray-800 p-2 overflow-x-auto hide-scrollbar flex items-center space-x-2 sm:space-x-3 shadow-[0_-10px_20px_rgba(0,0,0,0.3)]">
                 {displayedSheets.map((sheet) => (
                     <div 
                         key={sheet.id}
                         onClick={() => setActiveId(sheet.id)}
-                        className={`relative h-full shrink-0 w-20 rounded-lg cursor-pointer transition-all duration-200 overflow-hidden ${sheet.id === activeId ? 'ring-2 ring-blue-500 scale-95 opacity-100' : 'opacity-50 hover:opacity-100'}`}
+                        className={`relative h-full shrink-0 w-16 sm:w-20 rounded-lg cursor-pointer transition-all duration-200 overflow-hidden ${sheet.id === activeId ? 'ring-2 ring-blue-500 scale-95 opacity-100' : 'opacity-50 hover:opacity-100'}`}
                     >
                         <img src={sheet.url} alt={sheet.name} className="w-full h-full object-cover" />
-                        <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/90 to-transparent p-1 pt-4">
-                            <p className="text-[9px] font-medium truncate text-center text-gray-200">{sheet.name}</p>
+                        <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/95 to-transparent p-1 pt-6">
+                            <p className="text-[9px] font-medium truncate text-center text-gray-300">{sheet.name}</p>
                         </div>
                         {sheet.isFavorite && (
                             <div className="absolute top-1 right-1 text-red-500">
-                                <IconHeart solid={true} className="w-3 h-3" />
+                                <IconHeart solid={true} className="w-3 h-3 drop-shadow-md" />
                             </div>
                         )}
                     </div>
