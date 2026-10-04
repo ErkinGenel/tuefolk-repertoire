@@ -100,10 +100,13 @@ const local = storageAPI(window.localStorage);
 const session = storageAPI(window.sessionStorage);
 
 // --- SOUNDS (mp4 / wav under src/assets/sounds, subfolders allowed) ---
-const soundModules = import.meta.glob('./assets/sounds/**/*.{mp4,wav}', { eager: true, import: 'default' });
+const soundModules = import.meta.glob('./assets/sounds/**/*.{mp4,wav,MP4,WAV,Mp4,Wav}', { eager: true, import: 'default' });
 
 const normalize = (s) =>
     s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+// Song identity = title before "(country)" or " - description"
+// e.g. "Yüksek yüksek (Turkey) - infos_p1" -> "yuksekyuksek"
+const songKey = (name) => normalize(name.split(/\s+-\s+|\(/)[0]);
 const formatTime = (t) => {
     if (!isFinite(t)) return '0:00';
     const m = Math.floor(t / 60);
@@ -114,14 +117,17 @@ const formatTime = (t) => {
 const ALL_SOUNDS = Object.entries(soundModules).map(([path, url]) => {
     const parts = path.replace('./assets/sounds/', '').split('/');
     const filename = parts.pop();
-    const label = filename.replace(/\.[^/.]+$/, '');
+    const base = filename.replace(/\.[^/.]+$/, '');
+    const dash = base.search(/\s+-\s+/);
+    // Display label: the part after " - " (e.g. "last arrangement"), else the whole name
+    const label = (dash >= 0 ? base.slice(dash).replace(/^\s+-\s+/, '') : base).trim() || base.trim();
     return {
         id: path,
         path,
         url,
         label,
         ext: filename.split('.').pop().toLowerCase(),
-        keys: [...parts, label].map(normalize),
+        keys: [...parts, base].map(songKey),
     };
 });
 
@@ -495,24 +501,23 @@ const App = () => {
     const activeIndex = useMemo(() => displayedSheets.findIndex(s => s.id === activeId), [displayedSheets, activeId]);
     const activeSheet = displayedSheets[activeIndex];
 
-    // Assign each sound file to the best-matching song (longest name match wins)
+    // All pages of one song (same title before "(country)" / " - ") share the same playlist
     const soundsBySong = useMemo(() => {
-        const result = {};
-        sheets.forEach(s => { result[s.id] = []; });
-        const keysFor = sheets.map(s => ({
-            id: s.id,
-            keys: [normalize(s.name)].filter(Boolean),
-        }));
+        const byKey = {};
+        const unmatched = [];
+        const songKeys = new Set(sheets.map(s => s.groupKey));
         ALL_SOUNDS.forEach(sound => {
-            let best = null, bestScore = 0;
-            keysFor.forEach(({ id, keys }) => {
-                keys.forEach(k => {
-                    if (k.length > bestScore && sound.keys.some(sk => sk.startsWith(k))) { best = id; bestScore = k.length; }
-                });
-            });
-            if (best) result[best].push(sound);
+            const key = sound.keys.find(k => songKeys.has(k));
+            if (key) (byKey[key] = byKey[key] || []).push(sound);
+            else unmatched.push(sound.path);
         });
-        Object.values(result).forEach(list => list.sort((a, b) => a.path.localeCompare(b.path, undefined, { numeric: true })));
+        Object.values(byKey).forEach(list => list.sort((x, y) => x.path.localeCompare(y.path, undefined, { numeric: true })));
+        if (sheets.length > 0) {
+            console.info(`[Playlist] ${ALL_SOUNDS.length} sound file(s) found, ${ALL_SOUNDS.length - unmatched.length} matched.`);
+            if (unmatched.length) console.info('[Playlist] No matching song for:', unmatched);
+        }
+        const result = {};
+        sheets.forEach(s => { result[s.id] = byKey[s.groupKey] || []; });
         return result;
     }, [sheets]);
 
@@ -558,7 +563,7 @@ const App = () => {
                 if (foundKey) region = foundKey;
             }
 
-            return { id: filename, name, url, region: region || "Unmapped", isFavorite: savedFavs.includes(filename) };
+            return { id: filename, name, url, groupKey: songKey(name), region: region || "Unmapped", isFavorite: savedFavs.includes(filename) };
         });
 
         loadedSheets.sort((a, b) => a.name.localeCompare(b.name));
@@ -753,7 +758,7 @@ const App = () => {
 
             {/* PLAYLIST (only for songs with matching sound files) */}
             {viewMode === 'viewer' && activeSheet && activeTracks.length > 0 && (
-                <PlaylistPlayer key={activeSheet.id} tracks={activeTracks} />
+                <PlaylistPlayer key={activeSheet.groupKey} tracks={activeTracks} />
             )}
 
             {/* BOTTOM THUMBNAILS - Safe area padding added for mobile */}
