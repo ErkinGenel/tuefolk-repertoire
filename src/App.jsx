@@ -99,8 +99,8 @@ const storageAPI = (storage) => ({
 const local = storageAPI(window.localStorage);
 const session = storageAPI(window.sessionStorage);
 
-// --- SOUNDS (mp4 / wav under src/assets/sounds, subfolders allowed) ---
-const soundModules = import.meta.glob('./assets/sounds/**/*.{mp4,wav,MP4,WAV,Mp4,Wav}', { eager: true, import: 'default' });
+// --- SOUNDS (mp4 / wav / mp3 / m4a under src/assets/sounds, subfolders allowed) ---
+const soundModules = import.meta.glob('./assets/sounds/**/*.{mp4,wav,mp3,m4a,MP4,WAV,MP3,M4A,Mp4,Wav,Mp3,M4a}', { eager: true, import: 'default' });
 
 const normalize = (s) =>
     s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
