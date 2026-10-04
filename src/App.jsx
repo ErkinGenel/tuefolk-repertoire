@@ -121,49 +121,50 @@ const getRegionData = (regionName) => {
     
     const key = regionName.toLowerCase().trim();
     
-    // Normalized list mapping directly to singular regions
+    // Mathematically calculated coordinates (Longitude/Latitude converted to percentages)
+    // Formula: X = (Lon + 180)/360, Y = (90 - Lat)/150 (Map bounds roughly 90N to 60S)
     const regionsMap = {
-        'german': { id: 'germany', name: 'Germany', x: 51, y: 27 }, 'germany': { id: 'germany', name: 'Germany', x: 51, y: 27 },
-        'french': { id: 'france', name: 'France', x: 48.5, y: 29 }, 'france': { id: 'france', name: 'France', x: 48.5, y: 29 },
-        'english': { id: 'uk', name: 'United Kingdom', x: 47, y: 26 }, 'uk': { id: 'uk', name: 'United Kingdom', x: 47, y: 26 }, 'england': { id: 'uk', name: 'United Kingdom', x: 47, y: 26 },
-        'ireland': { id: 'ireland', name: 'Ireland', x: 46, y: 26 }, 'irish': { id: 'ireland', name: 'Ireland', x: 46, y: 26 },
-        'scottish': { id: 'scotland', name: 'Scotland', x: 46.5, y: 25 }, 'scotland': { id: 'scotland', name: 'Scotland', x: 46.5, y: 25 },
-        'spanish': { id: 'spain', name: 'Spain', x: 47, y: 32 }, 'spain': { id: 'spain', name: 'Spain', x: 47, y: 32 },
-        'italian': { id: 'italy', name: 'Italy', x: 51, y: 32 }, 'italy': { id: 'italy', name: 'Italy', x: 51, y: 32 },
-        'swedish': { id: 'sweden', name: 'Sweden', x: 52, y: 20 }, 'sweden': { id: 'sweden', name: 'Sweden', x: 52, y: 20 },
-        'norwegian': { id: 'norway', name: 'Norway', x: 50.5, y: 20 }, 'norway': { id: 'norway', name: 'Norway', x: 50.5, y: 20 },
-        'danish': { id: 'denmark', name: 'Denmark', x: 51, y: 24 }, 'denmark': { id: 'denmark', name: 'Denmark', x: 51, y: 24 },
-        'finnish': { id: 'finland', name: 'Finland', x: 54, y: 19 }, 'finland': { id: 'finland', name: 'Finland', x: 54, y: 19 },
-        'russian': { id: 'russia', name: 'Russia', x: 65, y: 22 }, 'russia': { id: 'russia', name: 'Russia', x: 65, y: 22 },
-        'polish': { id: 'poland', name: 'Poland', x: 53, y: 26 }, 'poland': { id: 'poland', name: 'Poland', x: 53, y: 26 },
-        'ukrainian': { id: 'ukraine', name: 'Ukraine', x: 56, y: 27 }, 'ukraine': { id: 'ukraine', name: 'Ukraine', x: 56, y: 27 },
-        'turkish': { id: 'turkey', name: 'Turkey', x: 57, y: 33 }, 'turkey': { id: 'turkey', name: 'Turkey', x: 57, y: 33 },
-        'greek': { id: 'greece', name: 'Greece', x: 54, y: 34 }, 'greece': { id: 'greece', name: 'Greece', x: 54, y: 34 },
-        'arabic': { id: 'arabic', name: 'Arabic', x: 58, y: 40 },
-        'american': { id: 'usa', name: 'USA', x: 22, y: 32 }, 'usa': { id: 'usa', name: 'USA', x: 22, y: 32 },
-        'canadian': { id: 'canada', name: 'Canada', x: 22, y: 25 }, 'canada': { id: 'canada', name: 'Canada', x: 22, y: 25 },
-        'mexican': { id: 'mexico', name: 'Mexico', x: 19, y: 43 }, 'mexico': { id: 'mexico', name: 'Mexico', x: 19, y: 43 },
-        'brazilian': { id: 'brazil', name: 'Brazil', x: 32, y: 62 }, 'brazil': { id: 'brazil', name: 'Brazil', x: 32, y: 62 },
-        'argentinian': { id: 'argentina', name: 'Argentina', x: 28, y: 75 }, 'argentina': { id: 'argentina', name: 'Argentina', x: 28, y: 75 },
-        'japanese': { id: 'japan', name: 'Japan', x: 86, y: 32 }, 'japan': { id: 'japan', name: 'Japan', x: 86, y: 32 },
-        'chinese': { id: 'china', name: 'China', x: 78, y: 35 }, 'china': { id: 'china', name: 'China', x: 78, y: 35 },
-        'korean': { id: 'korea', name: 'Korea', x: 83, y: 33 }, 'korea': { id: 'korea', name: 'Korea', x: 83, y: 33 },
-        'indian': { id: 'india', name: 'India', x: 70, y: 42 }, 'india': { id: 'india', name: 'India', x: 70, y: 42 },
-        'australian': { id: 'australia', name: 'Australia', x: 85, y: 75 }, 'australia': { id: 'australia', name: 'Australia', x: 85, y: 75 },
-        'celtic': { id: 'celtic', name: 'Celtic', x: 46.5, y: 26 },
-        'yiddish': { id: 'yiddish', name: 'Yiddish', x: 54, y: 27 },
-        'israel': { id: 'israel', name: 'Israel', x: 58, y: 36 }, 'jewish': { id: 'israel', name: 'Israel', x: 58, y: 36 },
-        'dutch': { id: 'netherlands', name: 'Netherlands', x: 49, y: 26 }, 'netherlands': { id: 'netherlands', name: 'Netherlands', x: 49, y: 26 },
-        'belgian': { id: 'belgium', name: 'Belgium', x: 49, y: 27 }, 'belgium': { id: 'belgium', name: 'Belgium', x: 49, y: 27 },
-        'swiss': { id: 'switzerland', name: 'Switzerland', x: 50, y: 29 }, 'switzerland': { id: 'switzerland', name: 'Switzerland', x: 50, y: 29 },
-        'austrian': { id: 'austria', name: 'Austria', x: 52, y: 29 }, 'austria': { id: 'austria', name: 'Austria', x: 52, y: 29 },
-        'czech': { id: 'czechia', name: 'Czechia', x: 53, y: 27 },
-        'hungarian': { id: 'hungary', name: 'Hungary', x: 54, y: 29 }, 'hungary': { id: 'hungary', name: 'Hungary', x: 54, y: 29 },
-        'romanian': { id: 'romania', name: 'Romania', x: 55, y: 30 }, 'romania': { id: 'romania', name: 'Romania', x: 55, y: 30 },
-        'bulgarian': { id: 'bulgaria', name: 'Bulgaria', x: 56, y: 32 }, 'bulgaria': { id: 'bulgaria', name: 'Bulgaria', x: 56, y: 32 },
-        'serbian': { id: 'serbia', name: 'Serbia', x: 54, y: 31 }, 'serbia': { id: 'serbia', name: 'Serbia', x: 54, y: 31 },
-        'croatian': { id: 'croatia', name: 'Croatia', x: 53, y: 31 }, 'croatia': { id: 'croatia', name: 'Croatia', x: 53, y: 31 },
-        'portuguese': { id: 'portugal', name: 'Portugal', x: 46, y: 33 }, 'portugal': { id: 'portugal', name: 'Portugal', x: 46, y: 33 }
+        'german': { id: 'germany', name: 'Germany', x: 52.9, y: 25.8 }, 'germany': { id: 'germany', name: 'Germany', x: 52.9, y: 25.8 },
+        'french': { id: 'france', name: 'France', x: 50.6, y: 29.2 }, 'france': { id: 'france', name: 'France', x: 50.6, y: 29.2 },
+        'english': { id: 'uk', name: 'United Kingdom', x: 49.0, y: 23.1 }, 'uk': { id: 'uk', name: 'United Kingdom', x: 49.0, y: 23.1 }, 'england': { id: 'uk', name: 'United Kingdom', x: 49.0, y: 23.1 },
+        'ireland': { id: 'ireland', name: 'Ireland', x: 47.7, y: 24.6 }, 'irish': { id: 'ireland', name: 'Ireland', x: 47.7, y: 24.6 },
+        'scottish': { id: 'scotland', name: 'Scotland', x: 48.8, y: 22.3 }, 'scotland': { id: 'scotland', name: 'Scotland', x: 48.8, y: 22.3 },
+        'spanish': { id: 'spain', name: 'Spain', x: 48.9, y: 33.0 }, 'spain': { id: 'spain', name: 'Spain', x: 48.9, y: 33.0 },
+        'italian': { id: 'italy', name: 'Italy', x: 53.4, y: 32.1 }, 'italy': { id: 'italy', name: 'Italy', x: 53.4, y: 32.1 },
+        'swedish': { id: 'sweden', name: 'Sweden', x: 55.1, y: 19.9 }, 'sweden': { id: 'sweden', name: 'Sweden', x: 55.1, y: 19.9 },
+        'norwegian': { id: 'norway', name: 'Norway', x: 52.3, y: 19.7 }, 'norway': { id: 'norway', name: 'Norway', x: 52.3, y: 19.7 },
+        'danish': { id: 'denmark', name: 'Denmark', x: 52.6, y: 22.5 }, 'denmark': { id: 'denmark', name: 'Denmark', x: 52.6, y: 22.5 },
+        'finnish': { id: 'finland', name: 'Finland', x: 57.1, y: 18.7 }, 'finland': { id: 'finland', name: 'Finland', x: 57.1, y: 18.7 },
+        'russian': { id: 'russia', name: 'Russia', x: 79.2, y: 19.0 }, 'russia': { id: 'russia', name: 'Russia', x: 79.2, y: 19.0 },
+        'polish': { id: 'poland', name: 'Poland', x: 55.3, y: 25.4 }, 'poland': { id: 'poland', name: 'Poland', x: 55.3, y: 25.4 },
+        'ukrainian': { id: 'ukraine', name: 'Ukraine', x: 58.6, y: 27.8 }, 'ukraine': { id: 'ukraine', name: 'Ukraine', x: 58.6, y: 27.8 },
+        'turkish': { id: 'turkey', name: 'Turkey', x: 59.7, y: 34.0 }, 'turkey': { id: 'turkey', name: 'Turkey', x: 59.7, y: 34.0 },
+        'greek': { id: 'greece', name: 'Greece', x: 56.0, y: 34.0 }, 'greece': { id: 'greece', name: 'Greece', x: 56.0, y: 34.0 },
+        'arabic': { id: 'arabic', name: 'Arabic', x: 62.5, y: 44.1 },
+        'american': { id: 'usa', name: 'USA', x: 23.4, y: 35.3 }, 'usa': { id: 'usa', name: 'USA', x: 23.4, y: 35.3 },
+        'canadian': { id: 'canada', name: 'Canada', x: 20.4, y: 22.6 }, 'canada': { id: 'canada', name: 'Canada', x: 20.4, y: 22.6 },
+        'mexican': { id: 'mexico', name: 'Mexico', x: 21.5, y: 44.2 }, 'mexico': { id: 'mexico', name: 'Mexico', x: 21.5, y: 44.2 },
+        'brazilian': { id: 'brazil', name: 'Brazil', x: 35.5, y: 69.4 }, 'brazil': { id: 'brazil', name: 'Brazil', x: 35.5, y: 69.4 },
+        'argentinian': { id: 'argentina', name: 'Argentina', x: 32.3, y: 85.6 }, 'argentina': { id: 'argentina', name: 'Argentina', x: 32.3, y: 85.6 },
+        'japanese': { id: 'japan', name: 'Japan', x: 88.3, y: 35.8 }, 'japan': { id: 'japan', name: 'Japan', x: 88.3, y: 35.8 },
+        'chinese': { id: 'china', name: 'China', x: 78.9, y: 36.1 }, 'china': { id: 'china', name: 'China', x: 78.9, y: 36.1 },
+        'korean': { id: 'korea', name: 'Korea', x: 85.4, y: 36.0 }, 'korea': { id: 'korea', name: 'Korea', x: 85.4, y: 36.0 },
+        'indian': { id: 'india', name: 'India', x: 71.9, y: 46.3 }, 'india': { id: 'india', name: 'India', x: 71.9, y: 46.3 },
+        'australian': { id: 'australia', name: 'Australia', x: 87.1, y: 76.8 }, 'australia': { id: 'australia', name: 'Australia', x: 87.1, y: 76.8 },
+        'celtic': { id: 'celtic', name: 'Celtic', x: 48.3, y: 24.0 },
+        'yiddish': { id: 'yiddish', name: 'Yiddish', x: 56.9, y: 26.6 },
+        'israel': { id: 'israel', name: 'Israel', x: 59.6, y: 39.3 }, 'jewish': { id: 'israel', name: 'Israel', x: 59.6, y: 39.3 },
+        'dutch': { id: 'netherlands', name: 'Netherlands', x: 51.4, y: 25.2 }, 'netherlands': { id: 'netherlands', name: 'Netherlands', x: 51.4, y: 25.2 },
+        'belgian': { id: 'belgium', name: 'Belgium', x: 51.2, y: 26.3 }, 'belgium': { id: 'belgium', name: 'Belgium', x: 51.2, y: 26.3 },
+        'swiss': { id: 'switzerland', name: 'Switzerland', x: 52.2, y: 28.8 }, 'switzerland': { id: 'switzerland', name: 'Switzerland', x: 52.2, y: 28.8 },
+        'austrian': { id: 'austria', name: 'Austria', x: 54.0, y: 28.3 }, 'austria': { id: 'austria', name: 'Austria', x: 54.0, y: 28.3 },
+        'czech': { id: 'czechia', name: 'Czechia', x: 54.2, y: 26.8 },
+        'hungarian': { id: 'hungary', name: 'Hungary', x: 55.4, y: 28.6 }, 'hungary': { id: 'hungary', name: 'Hungary', x: 55.4, y: 28.6 },
+        'romanian': { id: 'romania', name: 'Romania', x: 56.9, y: 29.4 }, 'romania': { id: 'romania', name: 'Romania', x: 56.9, y: 29.4 },
+        'bulgarian': { id: 'bulgaria', name: 'Bulgaria', x: 57.0, y: 31.5 }, 'bulgaria': { id: 'bulgaria', name: 'Bulgaria', x: 57.0, y: 31.5 },
+        'serbian': { id: 'serbia', name: 'Serbia', x: 55.8, y: 30.6 }, 'serbia': { id: 'serbia', name: 'Serbia', x: 55.8, y: 30.6 },
+        'croatian': { id: 'croatia', name: 'Croatia', x: 54.2, y: 29.9 }, 'croatia': { id: 'croatia', name: 'Croatia', x: 54.2, y: 29.9 },
+        'portuguese': { id: 'portugal', name: 'Portugal', x: 47.7, y: 33.8 }, 'portugal': { id: 'portugal', name: 'Portugal', x: 47.7, y: 33.8 }
     };
 
     if (regionsMap[key]) {
@@ -208,87 +209,96 @@ const WorldMap = ({ sheets, activeId, onSelect }) => {
 
     return (
         <div 
-            className="absolute inset-0 bg-[#060a13] flex items-center justify-center overflow-hidden z-0"
+            className="absolute inset-0 bg-[#060a13] flex flex-col items-center justify-center overflow-hidden z-0"
             onClick={() => setActiveRegion(null)}
         >
-            {/* Dot-matrix style world map SVG background */}
-            <div className="absolute inset-0 flex items-center justify-center opacity-40 pointer-events-none p-4 sm:p-10">
-                <svg viewBox="0 0 1008 650" className="w-full max-w-6xl h-auto" preserveAspectRatio="xMidYMid meet">
-                    <path fill="#3b82f6" d="M305,129c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S307,129,305,129z M287,144c-3,0-5,2-5,5c0,3,2,5,5,5c3,0,5-2,5-5C292,146,290,144,287,144z M323,161c-3,0-5,2-5,5c0,3,2,5,5,5c3,0,5-2,5-5C328,163,326,161,323,161z M273,169c-2,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S276,169,273,169z M301,180c-3,0-5,2-5,5c0,3,2,5,5,5c2,0,5-2,5-5C306,183,304,180,301,180z M258,197c-3,0-5,2-5,5c0,3,2,5,5,5c3,0,5-2,5-5C263,199,261,197,258,197z M288,206c-3,0-5,2-5,5c0,3,2,5,5,5c2,0,5-2,5-5C293,208,291,206,288,206z M271,228c-3,0-5,2-5,5c0,3,2,5,5,5c2,0,5-2,5-5C276,231,274,228,271,228z M253,248c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S256,248,253,248z M277,265c-2,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S280,265,277,265z M316,259c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S318,259,316,259z M305,291c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S307,291,305,291z M342,284c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S345,284,342,284z M330,317c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S333,317,330,317z M367,314c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S369,314,367,314z M315,348c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S318,348,315,348z M353,353c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S355,353,353,353z M381,385c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S383,385,381,385z M341,399c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S344,399,341,399z M367,429c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S369,429,367,429z M350,466c-2,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S353,466,350,466z M475,138c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S478,138,475,138z M513,116c-3,0-5,2-5,5c0,3,2,5,5,5c2,0,5-2,5-5C518,118,515,116,513,116z M551,130c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S554,130,551,130z M502,159c-2,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S505,159,502,159z M484,188c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S487,188,484,188z M528,185c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S530,185,528,185z M565,165c-3,0-5,2-5,5c0,3,2,5,5,5c3,0,5-2,5-5C570,167,568,165,565,165z M606,149c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S609,149,606,149z M642,126c-3,0-5,2-5,5c0,3,2,5,5,5c3,0,5-2,5-5C647,128,645,126,642,126z M683,141c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S685,141,683,141z M651,166c-2,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S654,166,651,166z M609,186c-2,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S612,186,609,186z M574,204c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S576,204,574,204z M529,223c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S532,223,529,223z M491,234c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S493,234,491,234z M474,271c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S477,271,474,271z M511,265c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S514,265,511,265z M547,258c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S550,258,547,258z M586,242c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S588,242,586,242z M628,217c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S631,217,628,217z M671,199c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S674,199,671,199z M716,183c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S719,183,716,183z M764,177c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S767,177,764,177z M810,195c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S812,195,810,195z M771,215c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S774,215,771,215z M735,221c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S738,221,735,221z M695,237c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S698,237,695,237z M654,258c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S657,258,654,258z M617,285c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S619,285,617,285z M579,307c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S582,307,579,307z M542,301c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S544,301,542,301z M498,312c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S501,312,498,312z M509,350c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S512,350,509,350z M551,348c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S554,348,551,348z M593,348c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S596,348,593,348z M636,326c-2,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S639,326,636,326z M678,298c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S680,298,678,298z M720,277c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S723,277,720,277z M764,253c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S766,253,764,253z M815,247c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S818,247,815,247z M859,256c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S862,256,859,256z M824,289c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S827,289,824,289z M778,295c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S781,295,778,295z M740,323c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S742,323,740,323z M695,348c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S698,348,695,348z M654,374c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S657,374,654,374z M616,400c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S618,400,616,400z M579,426c-2,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S582,426,579,426z M536,448c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S539,448,536,448z M509,394c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S512,394,509,394z M542,385c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S544,385,542,385z M707,388c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S709,388,707,388z M751,364c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S753,364,751,364z M796,338c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S799,338,796,338z M843,307c-2,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S846,307,843,307z M896,326c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S898,326,896,326z M863,356c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S866,356,863,356z M820,380c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S823,380,820,380z M776,401c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S779,401,776,401z M738,429c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S741,429,738,429z M701,455c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S704,455,701,455z M793,440c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S796,440,793,440z M843,409c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S846,409,843,409z M898,393c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S901,393,898,393z M865,429c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S868,429,865,429z" />
-                </svg>
-            </div>
-            
-            {/* Overlay Container perfectly aligning with SVG viewBox aspect ratio */}
-            <div className="relative w-full max-w-6xl aspect-[1008/650] px-4 sm:px-10 pointer-events-none">
-                {regions.map(region => {
-                    const isActive = activeRegion === region.id;
-                    const isHovered = hoveredRegion === region.id;
+            {/* The Unified Coordinate Container - Locks Map and Pins to exactly 1.97:1 ratio */}
+            <div className="relative w-full max-w-6xl px-2 sm:px-8 flex items-center justify-center pointer-events-none">
+                
+                <div className="relative w-full shadow-2xl rounded-lg" style={{ aspectRatio: '1.97 / 1' }}>
                     
-                    // Highlight the region dot if the currently selected song belongs here
-                    const hasActiveSheet = region.sheets.some(s => s.id === activeId);
+                    {/* High-quality World Map via WebKit Mask (Reliable, high-res Wikimedia base) */}
+                    <div 
+                        className="absolute inset-0 pointer-events-none transition-opacity duration-700"
+                        style={{
+                            backgroundColor: '#3b82f6', // Tailwind blue-500
+                            opacity: 0.35,
+                            maskImage: 'url("https://upload.wikimedia.org/wikipedia/commons/e/ec/World_map_blank_without_borders.svg")',
+                            WebkitMaskImage: 'url("https://upload.wikimedia.org/wikipedia/commons/e/ec/World_map_blank_without_borders.svg")',
+                            maskSize: '100% 100%',
+                            WebkitMaskSize: '100% 100%',
+                            maskRepeat: 'no-repeat',
+                            WebkitMaskRepeat: 'no-repeat'
+                        }}
+                    ></div>
+                    
+                    {/* Overlay Pins */}
+                    {regions.map(region => {
+                        const isActive = activeRegion === region.id;
+                        const isHovered = hoveredRegion === region.id;
+                        const hasActiveSheet = region.sheets.some(s => s.id === activeId);
+                        const popupIsAbove = region.y > 60; // Southern hemisphere opens up
 
-                    // Ensure menus for countries near the bottom of the map open UPWARDS to avoid clipping
-                    const popupIsAbove = region.y > 55;
-
-                    return (
-                        <div 
-                            key={region.id}
-                            className="absolute pointer-events-auto"
-                            style={{ left: `${region.x}%`, top: `${region.y}%` }}
-                            onClick={(e) => { e.stopPropagation(); setActiveRegion(isActive ? null : region.id); }}
-                            onMouseEnter={() => setHoveredRegion(region.id)}
-                            onMouseLeave={() => setHoveredRegion(null)}
-                        >
-                            {/* Region Country Dot */}
+                        return (
                             <div 
-                                className={`absolute w-3 h-3 md:w-4 md:h-4 -ml-1.5 -mt-1.5 md:-ml-2 md:-mt-2 rounded-full cursor-pointer transition-all duration-300 shadow-md ${isActive ? 'bg-blue-400 scale-[1.5] md:scale-150 z-20 shadow-[0_0_15px_rgba(59,130,246,0.8)]' : hasActiveSheet ? 'bg-blue-500 scale-125' : 'bg-red-500 hover:bg-white hover:scale-150 z-10'}`}
-                            />
-
-                            {/* Hover Label (only shown if not actively clicked) */}
-                            {isHovered && !isActive && (
-                                <div className="absolute z-30 bg-gray-900/95 text-white text-xs font-bold px-2 py-1 rounded border border-gray-600 -translate-x-1/2 -translate-y-full mt-[-12px] whitespace-nowrap shadow-xl pointer-events-none">
-                                    {region.name} <span className="text-gray-400 font-normal">({region.sheets.length})</span>
-                                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-t-[5px] border-t-gray-600"></div>
-                                </div>
-                            )}
-                            
-                            {/* Active Click Popup Menu (List of Songs) */}
-                            {isActive && (
+                                key={region.id}
+                                className="absolute pointer-events-auto"
+                                style={{ left: `${region.x}%`, top: `${region.y}%` }}
+                                onClick={(e) => { e.stopPropagation(); setActiveRegion(isActive ? null : region.id); }}
+                                onMouseEnter={() => setHoveredRegion(region.id)}
+                                onMouseLeave={() => setHoveredRegion(null)}
+                            >
+                                {/* Region Country Dot */}
                                 <div 
-                                    className={`absolute z-40 bg-gray-900/95 backdrop-blur-md border border-gray-600 rounded-xl shadow-2xl p-3 w-56 sm:w-64 -translate-x-1/2 cursor-default ${popupIsAbove ? '-translate-y-full -mt-4' : 'mt-4'}`}
-                                    onClick={(e) => e.stopPropagation()}
-                                >
-                                    <div className="flex justify-between items-center mb-2 border-b border-gray-700 pb-2">
-                                        <h3 className="text-sm font-bold text-white truncate pr-2">{region.name}</h3>
-                                        <button onClick={() => setActiveRegion(null)} className="text-gray-400 hover:text-white shrink-0 bg-gray-800 rounded p-0.5 transition-colors">
-                                            <IconX className="w-4 h-4" />
-                                        </button>
+                                    className={`absolute w-3.5 h-3.5 md:w-5 md:h-5 -ml-1.5 -mt-1.5 md:-ml-2.5 md:-mt-2.5 rounded-full cursor-pointer transition-all duration-300 shadow-md ${isActive ? 'bg-blue-400 scale-[1.5] md:scale-150 z-20 shadow-[0_0_15px_rgba(59,130,246,0.9)]' : hasActiveSheet ? 'bg-blue-500 scale-125 shadow-[0_0_8px_rgba(59,130,246,0.8)]' : 'bg-red-500 hover:bg-red-400 hover:scale-150 z-10'}`}
+                                />
+
+                                {/* Hover Label */}
+                                {isHovered && !isActive && (
+                                    <div className="absolute z-30 bg-gray-900/95 text-white text-xs font-bold px-2 py-1 rounded border border-gray-600 -translate-x-1/2 -translate-y-full mt-[-14px] whitespace-nowrap shadow-xl pointer-events-none">
+                                        {region.name} <span className="text-gray-400 font-normal">({region.sheets.length})</span>
+                                        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-t-[5px] border-t-gray-600"></div>
                                     </div>
-                                    <div className="max-h-48 overflow-y-auto hide-scrollbar flex flex-col space-y-1">
-                                        {region.sheets.map(sheet => (
-                                            <button 
-                                                key={sheet.id}
-                                                onClick={() => onSelect(sheet.id)}
-                                                className={`flex items-center space-x-3 text-left w-full px-2 py-1.5 rounded transition-colors group ${activeId === sheet.id ? 'bg-blue-600/40 text-blue-300' : 'hover:bg-gray-800 text-gray-300'}`}
-                                            >
-                                                <img src={sheet.url} alt="" className="w-8 h-10 object-cover rounded shadow-sm opacity-90 group-hover:opacity-100 shrink-0 bg-white" />
-                                                <span className="text-xs font-medium group-hover:text-white truncate flex-1">{sheet.name}</span>
-                                                {sheet.isFavorite && <IconHeart solid className="w-3.5 h-3.5 text-red-500 shrink-0" />}
+                                )}
+                                
+                                {/* Active Click Popup Menu (List of Songs) */}
+                                {isActive && (
+                                    <div 
+                                        className={`absolute z-40 bg-gray-900/95 backdrop-blur-md border border-gray-600 rounded-xl shadow-2xl p-3 w-56 sm:w-64 -translate-x-1/2 cursor-default ${popupIsAbove ? '-translate-y-full -mt-5' : 'mt-5'}`}
+                                        onClick={(e) => e.stopPropagation()}
+                                    >
+                                        <div className="flex justify-between items-center mb-2 border-b border-gray-700 pb-2">
+                                            <h3 className="text-sm font-bold text-white truncate pr-2">{region.name}</h3>
+                                            <button onClick={() => setActiveRegion(null)} className="text-gray-400 hover:text-white shrink-0 bg-gray-800 rounded p-0.5 transition-colors">
+                                                <IconX className="w-4 h-4" />
                                             </button>
-                                        ))}
+                                        </div>
+                                        <div className="max-h-48 overflow-y-auto hide-scrollbar flex flex-col space-y-1">
+                                            {region.sheets.map(sheet => (
+                                                <button 
+                                                    key={sheet.id}
+                                                    onClick={() => onSelect(sheet.id)}
+                                                    className={`flex items-center space-x-3 text-left w-full px-2 py-1.5 rounded transition-colors group ${activeId === sheet.id ? 'bg-blue-600/40 text-blue-300' : 'hover:bg-gray-800 text-gray-300'}`}
+                                                >
+                                                    <img src={sheet.url} alt="" className="w-8 h-10 object-cover rounded shadow-sm opacity-90 group-hover:opacity-100 shrink-0 bg-white" />
+                                                    <span className="text-xs font-medium group-hover:text-white truncate flex-1">{sheet.name}</span>
+                                                    {sheet.isFavorite && <IconHeart solid className="w-3.5 h-3.5 text-red-500 shrink-0" />}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        
+                                        {/* Smart pointer arrows for popup orientation */}
+                                        {popupIsAbove ? (
+                                            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-gray-600"></div>
+                                        ) : (
+                                            <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-full w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[6px] border-b-gray-600"></div>
+                                        )}
                                     </div>
-                                    
-                                    {/* Smart pointer arrows for popup orientation */}
-                                    {popupIsAbove ? (
-                                        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-gray-600"></div>
-                                    ) : (
-                                        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-full w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[6px] border-b-gray-600"></div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                    );
-                })}
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
             </div>
         </div>
     );
