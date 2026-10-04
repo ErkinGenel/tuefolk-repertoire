@@ -1,16 +1,35 @@
-# React + Vite
+# FolkRepertoire
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Sheet-music viewer with favorites, a metronome and a world map that shows where each song comes from.
 
-Currently, two official plugins are available:
+## Run
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```bash
+npm install
+npm run dev      # development
+npm run build    # production build in dist/
+npm run preview  # serve the production build
+```
 
-## React Compiler
+## Add songs
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Put images (`png`, `jpg`, `jpeg`, `gif`, `webp`) into `src/assets/images/`.
+The text in brackets in the file name is the region used for the map:
 
-## Expanding the ESLint configuration
+```
+Greensleeves (England).png
+Hava Nagila (Israel).jpg
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Known region words are listed in `src/lib/regions.js`. Add a new place by giving it a
+latitude/longitude there; unknown regions appear as grey markers along the bottom of the map.
+
+## Map calibration
+
+`src/lib/regions.js` projects latitude/longitude to the map with a linear (equirectangular)
+projection. If every marker is shifted by the same amount, adjust `MAP_BOUNDS` there.
+
+## Password
+
+The password (`folk`) is set at the top of `src/App.jsx`. It is checked in the browser only,
+so it is a gate for casual visitors, not real security.
