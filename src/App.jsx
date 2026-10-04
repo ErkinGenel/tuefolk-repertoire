@@ -134,21 +134,20 @@ const Tooltip = ({ data, x, y, visible, onSelect, onClose }) => {
             style={{ 
                 left: `${x}px`, top: `${y}px`, width: 'max-content', maxWidth: '320px', maxHeight: '350px', borderRadius: '2px 10px 3px 8px / 10px 2px 8px 3px'
             }}
-            onClick={(e) => e.stopPropagation()} // Prevent map from closing the tooltip when interacting with it
+            onClick={(e) => e.stopPropagation()}
         >
             <div className="font-bold border-b border-[#a6967f] mb-3 pb-1 text-[#d94a38] flex justify-between items-center shrink-0">
                 <span className="pr-4 truncate uppercase tracking-wider text-sm font-sans">{data.countriesTitle}</span>
                 <button onClick={onClose} className="text-gray-500 hover:text-black font-sans text-lg font-bold transition-colors w-6 h-6 flex items-center justify-center rounded-full hover:bg-black/10">✕</button>
             </div>
             
-            {/* Clickable List of Songs for this Country */}
             <ul className="list-none p-0 m-0 overflow-y-auto hide-scrollbar space-y-1.5 flex-1">
                 {data.songs.map(song => (
                     <li key={song.id}>
                         <button
                             onClick={() => {
-                                onSelect(song.id); // Triggers App to open viewer and load this song
-                                onClose();         // Close the tooltip
+                                onSelect(song.id);
+                                onClose();
                             }}
                             className="w-full text-left px-3 py-2 rounded-md transition-all text-[18px] sm:text-[20px] leading-tight font-medium bg-[#d94a38]/5 hover:bg-[#d94a38]/20 hover:text-[#a72818] border border-transparent hover:border-[#d94a38]/30 hover:pl-4"
                         >
@@ -176,7 +175,6 @@ function WorldMap({ sheets, onSelect }) {
     const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
     const [zoomState, setZoomState] = useState({ k: 1, x: 0, y: 0 });
 
-    // Group songs by geographical coordinate
     const markersData = useMemo(() => {
         const mapData = {};
         sheets.forEach(song => {
@@ -230,20 +228,17 @@ function WorldMap({ sheets, onSelect }) {
         zoomRef.current = zoom;
     }, [dimensions]); 
 
-    // Open Country Tooltip
     const handleMarkerClick = (event, markerData) => {
         event.stopPropagation();
         
         let px = event.clientX + 15;
         let py = event.clientY + 15;
-        // Keep popup inside window bounds
         if (px + 320 > window.innerWidth) px = Math.max(10, event.clientX - 330);
         if (py + 350 > window.innerHeight) py = Math.max(10, event.clientY - 360);
 
         setTooltipData({ visible: true, x: px, y: py, data: markerData });
         if (markerData.countries.size > 0) setHoveredCountry(Array.from(markerData.countries)[0]);
 
-        // Zoom map smoothly to dot location
         const [x, y] = projection(markerData.coords);
         if (svgRef.current && zoomRef.current) {
             d3.select(svgRef.current).transition().duration(750).call(
@@ -370,13 +365,13 @@ const App = () => {
             
             let region = null;
             
-            // 1. Try to extract region directly from parentheses (e.g. "Song (Germany)")
+            // 1. Try parentheses
             const match = name.match(/\(([^)]+)\)/);
             if (match) {
                 region = match[1].trim();
             }
             
-            // 2. If region wasn't found in parentheses (or doesn't match a country on our map), scan the full filename text
+            // 2. Scan entire filename text against dictionary keys
             if (!region || (!GEO_DICT[region] && !GEO_DICT[region.replace('*', '')])) {
                 const foundKey = Object.keys(GEO_DICT).find(countryKey => name.toLowerCase().includes(countryKey.replace('*', '').toLowerCase()));
                 if (foundKey) region = foundKey;
@@ -470,7 +465,7 @@ const App = () => {
             {/* SIDEBAR */}
             <div className={`fixed inset-y-0 left-0 w-80 max-w-[85vw] bg-gray-900 border-r border-gray-800 z-50 transform transition-transform duration-300 flex flex-col shadow-2xl ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
                 <div className="p-4 border-b border-gray-800 flex justify-between items-center bg-gray-900 shrink-0">
-                    <h2 className="text-lg font-bold text-gray-100 flex items-center gap-2"><IconMusic className="w-5 h-5 text-blue-500" /> Song List</h2>
+                    <h2 className="text-lg font-bold text-gray-100 flex items-center gap-2"><IconMusic className="w-5 h-5 text-blue-500" /> Song List ({sheets.length})</h2>
                     <button onClick={() => setIsMenuOpen(false)} className="p-2 text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"><IconX className="w-5 h-5" /></button>
                 </div>
 
