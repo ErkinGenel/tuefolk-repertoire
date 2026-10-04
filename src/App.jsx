@@ -466,7 +466,8 @@ const App = () => {
                                     draggable="false"
                                 />
                                 
-                                <div className="absolute top-4 right-4 sm:top-6 sm:right-6 bg-gray-900/80 backdrop-blur-md px-4 py-2 rounded-xl flex items-center space-x-3 border border-gray-700/50 shadow-2xl">
+                                {/* Added z-20 class here so it sits above the Navigation Overlays */}
+                                <div className="absolute top-4 right-4 sm:top-6 sm:right-6 z-20 bg-gray-900/80 backdrop-blur-md px-4 py-2 rounded-xl flex items-center space-x-3 border border-gray-700/50 shadow-2xl">
                                     <span className="font-semibold text-sm max-w-[150px] sm:max-w-md truncate">{activeSheet.name}</span>
                                     <button 
                                         onClick={(e) => { e.stopPropagation(); toggleFavorite(activeSheet.id); }}
