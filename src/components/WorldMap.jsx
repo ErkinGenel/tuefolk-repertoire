@@ -2,7 +2,7 @@ import { useState, useRef, useMemo } from 'react';
 import { IconHeart, IconX } from './icons.jsx';
 import { getRegionData } from '../lib/regions.js';
 
-const MAP_URL = 'https://upload.wikimedia.org/wikipedia/commons/e/ec/World_map_blank_without_borders.svg';
+const MAP_URL = import.meta.env.VITE_MAP_URL || 'https://upload.wikimedia.org/wikipedia/commons/e/ec/World_map_blank_without_borders.svg';
 
 export default function WorldMap({ sheets, activeId, onSelect }) {
     const [activeRegion, setActiveRegion] = useState(null);

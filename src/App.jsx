@@ -5,6 +5,7 @@ import {
 } from './components/icons.jsx';
 import WorldMap from './components/WorldMap.jsx';
 import { metronomeEngine } from './lib/metronome.js';
+import { session, local } from './lib/storage.js';
 
 // NOTE: this password check runs in the browser only. It keeps casual visitors
 // out, but it is not real security – anyone can read it in the built JS.
@@ -12,7 +13,7 @@ const CORRECT_PASSWORD = 'folk';
 
 const App = () => {
     const [isAuthenticated, setIsAuthenticated] = useState(() => {
-        return sessionStorage.getItem('folkAuth') === 'true';
+        return session.get('folkAuth') === 'true';
     });
     const [passwordInput, setPasswordInput] = useState('');
     const [loginError, setLoginError] = useState(false);
@@ -60,7 +61,7 @@ const App = () => {
         e.preventDefault();
         if (passwordInput === CORRECT_PASSWORD) {
             setIsAuthenticated(true);
-            sessionStorage.setItem('folkAuth', 'true');
+            session.set('folkAuth', 'true');
             setLoginError(false);
         } else {
             setLoginError(true);
@@ -74,7 +75,7 @@ const App = () => {
     useEffect(() => {
         if (!isAuthenticated) return;
 
-        const savedFavs = JSON.parse(localStorage.getItem('folkFavorites') || '[]');
+        const savedFavs = (() => { try { return JSON.parse(local.get('folkFavorites', '[]')); } catch { return []; } })();
         const imageModules = import.meta.glob('./assets/images/*.{png,jpg,jpeg,gif,webp}', {
             eager: true,
             import: 'default',
@@ -119,7 +120,7 @@ const App = () => {
                 s.id === idToToggle ? { ...s, isFavorite: !s.isFavorite } : s
             );
             const favIds = nextSheets.filter((s) => s.isFavorite).map((s) => s.id);
-            localStorage.setItem('folkFavorites', JSON.stringify(favIds));
+            local.set('folkFavorites', JSON.stringify(favIds));
             return nextSheets;
         });
     };
