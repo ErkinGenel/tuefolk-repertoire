@@ -353,7 +353,7 @@ const App = () => {
         }
     };
 
-    // Load Images & Extract Region Robustly
+    // Load Images & Extract Region Robustly (Ensure 100% of songs load)
     useEffect(() => {
         if (!isAuthenticated) return;
         const savedFavs = (() => { try { return JSON.parse(local.get('folkFavorites', '[]')); } catch { return []; } })();
@@ -365,7 +365,7 @@ const App = () => {
             
             let region = null;
             
-            // 1. Try parentheses
+            // 1. Try parentheses first
             const match = name.match(/\(([^)]+)\)/);
             if (match) {
                 region = match[1].trim();
@@ -377,7 +377,7 @@ const App = () => {
                 if (foundKey) region = foundKey;
             }
 
-            return { id: filename, name, url, region, isFavorite: savedFavs.includes(filename) };
+            return { id: filename, name, url, region: region || "Unmapped", isFavorite: savedFavs.includes(filename) };
         });
 
         loadedSheets.sort((a, b) => a.name.localeCompare(b.name));
@@ -439,7 +439,7 @@ const App = () => {
 
     if (!isAuthenticated) {
         return (
-            <div className="h-screen w-screen flex items-center justify-center bg-gray-950 text-gray-100 font-sans p-4">
+            <div className="h-[100dvh] w-screen flex items-center justify-center bg-gray-950 text-gray-100 font-sans p-4">
                 <div className="max-w-md w-full bg-gray-900 border border-gray-800 rounded-2xl p-8 shadow-2xl flex flex-col items-center">
                     <div className="w-16 h-16 bg-blue-600/20 text-blue-400 rounded-2xl flex items-center justify-center mb-6 border border-blue-500/30">
                         <IconLock className="w-8 h-8" />
@@ -459,7 +459,7 @@ const App = () => {
     }
 
     return (
-        <div className="h-screen w-screen flex flex-col bg-gray-900 text-gray-100 font-sans overflow-hidden">
+        <div className="h-[100dvh] w-screen flex flex-col bg-gray-900 text-gray-100 font-sans overflow-hidden">
             {isMenuOpen && <div className="fixed inset-0 bg-black/60 z-40 backdrop-blur-sm transition-opacity" onClick={() => setIsMenuOpen(false)}></div>}
 
             {/* SIDEBAR */}
@@ -526,7 +526,7 @@ const App = () => {
             </div>
 
             {/* MAIN CONTENT AREA */}
-            <div className="flex-1 relative flex items-center justify-center overflow-hidden bg-black outline-none" tabIndex={0}>
+            <div className="flex-1 relative flex items-center justify-center overflow-hidden bg-black outline-none min-h-0" tabIndex={0}>
                 {displayedSheets.length === 0 ? (
                     <div className="text-gray-500 flex flex-col items-center">
                         <IconMusic className="w-16 h-16 mb-4 opacity-20" />
@@ -567,8 +567,8 @@ const App = () => {
                 )}
             </div>
 
-            {/* BOTTOM THUMBNAILS */}
-            <div className="h-24 sm:h-28 shrink-0 bg-gray-900 border-t border-gray-800 p-2 overflow-x-auto hide-scrollbar flex items-center space-x-2 sm:space-x-3 shadow-[0_-10px_20px_rgba(0,0,0,0.3)]">
+            {/* BOTTOM THUMBNAILS - Safe area padding added for mobile */}
+            <div className="h-24 sm:h-28 shrink-0 bg-gray-900 border-t border-gray-800 p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] overflow-x-auto hide-scrollbar flex items-center space-x-2 sm:space-x-3 shadow-[0_-10px_20px_rgba(0,0,0,0.3)] z-20">
                 {displayedSheets.map((sheet) => (
                     <div key={sheet.id} onClick={() => setActiveId(sheet.id)} className={`relative h-full shrink-0 w-16 sm:w-20 rounded-lg cursor-pointer transition-all duration-200 overflow-hidden ${sheet.id === activeId ? 'ring-2 ring-blue-500 scale-95 opacity-100' : 'opacity-50 hover:opacity-100'}`}>
                         <img src={sheet.url} alt={sheet.name} className="w-full h-full object-cover" />
