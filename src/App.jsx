@@ -1,575 +1,789 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import * as d3 from 'd3';
-import { geoPath, geoNaturalEarth1 } from 'd3-geo';
-import { initializeApp } from 'firebase/app';
-import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
-import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection } from 'firebase/firestore';
 
-const userFirebaseConfig = {
-    apiKey: "AIzaSyC5zZGumULldodFaHMvenHq-BSfD57X51U",
-    authDomain: "tuefolk.firebaseapp.com",
-    projectId: "tuefolk",
-    storageBucket: "tuefolk.firebasestorage.app",
-    messagingSenderId: "599412217839",
-    appId: "1:599412217839:web:304f84455b27dbd474481a"
-};
-
-const firebaseConfig = typeof __firebase_config !== 'undefined' && __firebase_config 
-    ? JSON.parse(__firebase_config) 
-    : userFirebaseConfig;
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const appId = typeof __app_id !== 'undefined' && __app_id ? __app_id : 'tuefolk-repertoire';
-
-const SONGS_DATA = [
-    { id: 1, name: "Apertura (Sergio Pinto)", country: "Argentinien*" },
-    { id: 2, name: "Das Bürgerlied", country: "Deutschland" },
-    { id: 3, name: "Cartomante", country: "Brasilien" },
-    { id: 4, name: "Charagua", country: "Bolivien*" },
-    { id: 5, name: "Chervona Ruta", country: "Ukraine" },
-    { id: 6, name: "Eu Vi Mamãe Oxum", country: "Brasilien" },
-    { id: 7, name: "Longa Farahfaza", country: "Ägypten" },
-    { id: 8, name: "Omushiija Antiire", country: "Uganda*" },
-    { id: 9, name: "Sa Pastera", country: "Spanien (Mallorca)" },
-    { id: 10, name: "Schiarazula Marazula", country: "Italien (Friaul)" },
-    { id: 11, name: "Hassebni u Khoud Karak", country: "Algerien" },
-    { id: 12, name: "Ya Rayah", country: "Algerien" },
-    { id: 13, name: "Merceditas", country: "Argentinien" },
-    { id: 14, name: "Tvoite Ochi Leno", country: "Bulgarien" },
-    { id: 15, name: "Despedida", country: "Chile" },
-    { id: 16, name: "Gavotenn", country: "Frankreich (Bretagne)" },
-    { id: 17, name: "Les Œufs en Meurette", country: "Frankreich" },
-    { id: 18, name: "Kirialesa-Kintauri", country: "Georgien" },
-    { id: 19, name: "Der Jungbrunnen", country: "Deutschland" },
-    { id: 20, name: "Der Mond ist aufgegangen", country: "Deutschland" },
-    { id: 21, name: "Gülbahar", country: "Griechenland" },
-    { id: 22, name: "Dokhtare", country: "Iran" },
-    { id: 23, name: "'O Te Voglio", country: "Italien (Neapel)" },
-    { id: 24, name: "Amore Mio Non Piangere", country: "Italien" },
-    { id: 25, name: "Menamenamo", country: "Italien" },
-    { id: 26, name: "Mens Durf te Leven", country: "Niederlande" },
-    { id: 27, name: "Ya Tal'een", country: "Palästina" },
-    { id: 28, name: "Ojos Azules (Huayno)", country: "Peru" },
-    { id: 29, name: "Czerwone Jabłuszko", country: "Polen" },
-    { id: 30, name: "Quando Eu Era Pequenina", country: "Portugal" },
-    { id: 31, name: "Ngabwa", country: "Uganda" },
-    { id: 32, name: "Ja Pidu v Daleki Hory", country: "Ukraine" },
-    { id: 33, name: "Pony Boy", country: "USA" },
-    { id: 34, name: "Hilf, o Himmel", country: "Frankreich (Elsass)" },
-    { id: 35, name: "Pelo Telefone", country: "Brasilien" },
-    { id: 36, name: "The Crooked Stovepipe", country: "Kanada" },
-    { id: 37, name: "Caicai Vilu", country: "Chile" },
-    { id: 38, name: "Chun Jiang Hua Yue Ye (A Moonlit Night on the Spring River)", country: "China" },
-    { id: 39, name: "Cumbia del Monte", country: "Kolumbien" },
-    { id: 40, name: "El Helwa Di", country: "Ägypten" },
-    { id: 41, name: "Tsangala da Gogona", country: "Georgien" },
-    { id: 42, name: "Deutscher (58. Altländer)", country: "Deutschland" },
-    { id: 43, name: "Kalitera sti Mavri Gis", country: "Griechenland" },
-    { id: 44, name: "Kalyan", country: "Indien" },
-    { id: 45, name: "Kameh (وقمح)", country: "Libanon" },
-    { id: 46, name: "Yek Mumik", country: "Kurdistan (Region)*" },
-    { id: 47, name: "Rumelay / Rumelaj", country: "Roma/Balkan*" },
-    { id: 48, name: "Montanara di Carpino", country: "Italien (Apulien)" },
-    { id: 49, name: "Bravade", country: "Niederlande" },
-    { id: 50, name: "Apo Xeno Topo", country: "Griechenland" },
-    { id: 51, name: "Japanisches Lied & irische Melodie", country: "Japan / Irland" },
-    { id: 52, name: "Nakhes fun Kinder", country: "Klezmer (aschkenasisch-jüdisch, Osteuropa)" },
-    { id: 53, name: "Maria Faia", country: "Portugal" },
-    { id: 54, name: "Písali Noviny", country: "Slowakei" },
-    { id: 55, name: "Der Schlossergsell", country: "Deutschland (Schwaben)" },
-    { id: 56, name: "Polska", country: "Schweden" },
-    { id: 57, name: "Sangini Dhun", country: "Nepal" },
-    { id: 58, name: "Yüksek Yüksek Tepelere", country: "Türkei" },
-    { id: 59, name: "Walzer 8-4", country: "Deutschland" },
-    { id: 60, name: "1,2,3,4 Zwiefacher", country: "Deutschland" },
-    { id: 61, name: "Migldi Magldi", country: "Wales*" },
-    { id: 62, name: "Lo Sivano", country: "Kurdistan (Region)*" },
-    { id: 63, name: "O Africa", country: "Kongo*" },
-    { id: 64, name: "Suna Hai Hathi", country: "Indien*" },
-    { id: 65, name: "Hicaz Mandıra", country: "Türkei" }
-];
-
-const GEO_DICT = {
-    "Argentinien*": [-64.0, -34.6], "Argentinien": [-64.0, -34.6],
-    "Deutschland": [10.4, 51.1], "Deutschland (Schwaben)": [9.8, 48.3],
-    "Brasilien": [-51.9, -14.2],
-    "Bolivien*": [-68.1, -16.2],
-    "Ukraine": [31.1, 48.3],
-    "Ägypten": [30.8, 26.8],
-    "Uganda*": [32.2, 1.3], "Uganda": [32.2, 1.3],
-    "Spanien (Mallorca)": [2.9, 39.6],
-    "Italien (Friaul)": [13.2, 46.1], "Italien (Neapel)": [14.2, 40.8], "Italien (Apulien)": [16.8, 41.1], "Italien": [12.5, 41.8],
-    "Algerien": [1.6, 28.0],
-    "Bulgarien": [25.4, 42.7],
-    "Chile": [-71.5, -35.6],
-    "Frankreich (Bretagne)": [-2.9, 48.2], "Frankreich (Elsass)": [7.4, 48.3], "Frankreich": [2.2, 46.2],
-    "Georgien": [43.3, 42.3],
-    "Griechenland": [22.0, 39.0],
-    "Iran": [53.6, 32.4],
-    "Niederlande": [5.2, 52.1],
-    "Palästina": [35.2, 31.9],
-    "Peru": [-75.0, -9.1],
-    "Polen": [19.1, 51.9],
-    "Portugal": [-8.2, 39.3],
-    "USA": [-95.7, 37.0],
-    "Kanada": [-106.3, 56.1],
-    "China": [104.1, 35.8],
-    "Kolumbien": [-74.0, 4.5],
-    "Indien": [78.9, 20.5], "Indien*": [78.9, 20.5],
-    "Libanon": [35.8, 33.8],
-    "Kurdistan (Region)*": [43.9, 36.1],
-    "Roma/Balkan*": [21.1, 42.7],
-    "Japan / Irland": [138.2, 36.2], 
-    "Klezmer (aschkenasisch-jüdisch, Osteuropa)": [25.0, 50.0],
-    "Slowakei": [19.6, 48.6],
-    "Schweden": [18.6, 60.1],
-    "Nepal": [84.1, 28.3],
-    "Türkei": [35.2, 38.9],
-    "Wales*": [-3.8, 52.3],
-    "Kongo*": [23.0, -4.0]
-};
-
-const GlobalStyles = () => (
-    <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;600&display=swap');
-        
-        .map-app-container {
-            background-color: #f4ecd8;
-            background-image: 
-                radial-gradient(#e5d8bc 1px, transparent 1px),
-                linear-gradient(transparent 95%, rgba(0,0,0,0.05) 95%);
-            background-size: 20px 20px, 100% 40px;
-            font-family: 'Caveat', cursive;
-            color: #3e332a;
-        }
-
-        .map-app-container ::-webkit-scrollbar { width: 8px; }
-        .map-app-container ::-webkit-scrollbar-track { background: rgba(0,0,0,0.05); border-radius: 4px; }
-        .map-app-container ::-webkit-scrollbar-thumb { background: #b5a48b; border-radius: 4px; }
-        .map-app-container ::-webkit-scrollbar-thumb:hover { background: #8e7d65; }
-
-        .sketched-border {
-            border: 2px solid #8c7a61;
-            border-radius: 2px 255px 3px 25px / 255px 5px 225px 3px;
-        }
-        
-        .song-item-transition { transition: all 0.2s ease; }
-
-        .music-note {
-            position: absolute;
-            opacity: 0.1;
-            pointer-events: none;
-            font-family: sans-serif;
-            color: #8c7a61;
-            animation: float 15s infinite ease-in-out;
-        }
-
-        @keyframes float {
-            0% { transform: translateY(0) rotate(0deg); opacity: 0.1; }
-            50% { transform: translateY(-20px) rotate(10deg); opacity: 0.2; }
-            100% { transform: translateY(0) rotate(0deg); opacity: 0.1; }
-        }
-
-        .clef {
-            position: absolute;
-            font-size: 200px;
-            opacity: 0.03;
-            color: #8c7a61;
-            pointer-events: none;
-            z-index: 0;
-            left: 5%;
-            top: 20%;
-        }
-
-        .like-button-anim:active {
-            transform: scale(0.8);
-        }
-    `}</style>
+const IconHeart = ({ solid, className }) => (
+    <svg className={className} fill={solid ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+    </svg>
 );
 
-const Tooltip = ({ data, x, y, visible }) => {
-    if (!visible || !data) return null;
+const IconChevronLeft = ({ className }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"></path>
+    </svg>
+);
+
+const IconChevronRight = ({ className }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"></path>
+    </svg>
+);
+
+const IconMap = ({ className }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
+    </svg>
+);
+
+const IconMusic = ({ className }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path>
+    </svg>
+);
+
+const IconLock = ({ className }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002-2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+    </svg>
+);
+
+const IconMenu = ({ className }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16"></path>
+    </svg>
+);
+
+const IconX = ({ className }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"></path>
+    </svg>
+);
+
+const IconSearch = ({ className }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"></path>
+    </svg>
+);
+
+class Metronome {
+    constructor() {
+        this.audioCtx = null;
+        this.isPlaying = false;
+        this.timerID = null;
+        this.bpm = 120;
+        this.nextNoteTime = 0;
+    }
+
+    init() {
+        if (!this.audioCtx) {
+            this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+    }
+
+    scheduleNote() {
+        const osc = this.audioCtx.createOscillator();
+        const gain = this.audioCtx.createGain();
+        
+        osc.connect(gain);
+        gain.connect(this.audioCtx.destination);
+        
+        osc.frequency.value = 800;
+        
+        gain.gain.setValueAtTime(1, this.nextNoteTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.nextNoteTime + 0.05);
+        
+        osc.start(this.nextNoteTime);
+        osc.stop(this.nextNoteTime + 0.05);
+    }
+
+    scheduler() {
+        while (this.nextNoteTime < this.audioCtx.currentTime + 0.1) {
+            this.scheduleNote();
+            const secondsPerBeat = 60.0 / this.bpm;
+            this.nextNoteTime += secondsPerBeat;
+        }
+        this.timerID = requestAnimationFrame(this.scheduler.bind(this));
+    }
+
+    start() {
+        this.init();
+        if (this.isPlaying) return;
+        this.isPlaying = true;
+        this.nextNoteTime = this.audioCtx.currentTime + 0.05;
+        this.scheduler();
+    }
+
+    stop() {
+        this.isPlaying = false;
+        cancelAnimationFrame(this.timerID);
+    }
+    
+    setBpm(newBpm) {
+        this.bpm = newBpm;
+    }
+}
+
+const metronomeEngine = new Metronome();
+
+const getRegionData = (regionName) => {
+    if (!regionName) {
+        return { id: 'unspecified', name: 'Unspecified', x: 50, y: 92, isUnknown: true };
+    }
+    
+    const key = regionName.toLowerCase().trim();
+    
+    // Perfectly tuned coordinates matching the Wikimedia Robinson Map Projection
+    const regionsMap = {
+        // Europe
+        'german': { id: 'germany', name: 'Germany', x: 50.5, y: 24.5 }, 'germany': { id: 'germany', name: 'Germany', x: 50.5, y: 24.5 }, 'deutsch': { id: 'germany', name: 'Germany', x: 50.5, y: 24.5 },
+        'french': { id: 'france', name: 'France', x: 48.0, y: 26.5 }, 'france': { id: 'france', name: 'France', x: 48.0, y: 26.5 }, 'francais': { id: 'france', name: 'France', x: 48.0, y: 26.5 },
+        'english': { id: 'uk', name: 'United Kingdom', x: 46.5, y: 22.0 }, 'uk': { id: 'uk', name: 'United Kingdom', x: 46.5, y: 22.0 }, 'england': { id: 'uk', name: 'United Kingdom', x: 46.5, y: 22.0 },
+        'ireland': { id: 'ireland', name: 'Ireland', x: 44.5, y: 22.0 }, 'irish': { id: 'ireland', name: 'Ireland', x: 44.5, y: 22.0 }, 'eire': { id: 'ireland', name: 'Ireland', x: 44.5, y: 22.0 },
+        'scottish': { id: 'scotland', name: 'Scotland', x: 46.0, y: 19.0 }, 'scotland': { id: 'scotland', name: 'Scotland', x: 46.0, y: 19.0 },
+        'spanish': { id: 'spain', name: 'Spain', x: 46.5, y: 31.0 }, 'spain': { id: 'spain', name: 'Spain', x: 46.5, y: 31.0 }, 'espana': { id: 'spain', name: 'Spain', x: 46.5, y: 31.0 },
+        'italian': { id: 'italy', name: 'Italy', x: 52.0, y: 29.0 }, 'italy': { id: 'italy', name: 'Italy', x: 52.0, y: 29.0 }, 'italia': { id: 'italy', name: 'Italy', x: 52.0, y: 29.0 },
+        'swedish': { id: 'sweden', name: 'Sweden', x: 52.5, y: 16.0 }, 'sweden': { id: 'sweden', name: 'Sweden', x: 52.5, y: 16.0 },
+        'norwegian': { id: 'norway', name: 'Norway', x: 50.0, y: 16.0 }, 'norway': { id: 'norway', name: 'Norway', x: 50.0, y: 16.0 },
+        'danish': { id: 'denmark', name: 'Denmark', x: 50.5, y: 20.5 }, 'denmark': { id: 'denmark', name: 'Denmark', x: 50.5, y: 20.5 },
+        'finnish': { id: 'finland', name: 'Finland', x: 55.0, y: 16.0 }, 'finland': { id: 'finland', name: 'Finland', x: 55.0, y: 16.0 },
+        'russian': { id: 'russia', name: 'Russia', x: 65.0, y: 15.0 }, 'russia': { id: 'russia', name: 'Russia', x: 65.0, y: 15.0 },
+        'polish': { id: 'poland', name: 'Poland', x: 53.0, y: 23.5 }, 'poland': { id: 'poland', name: 'Poland', x: 53.0, y: 23.5 },
+        'ukrainian': { id: 'ukraine', name: 'Ukraine', x: 56.5, y: 24.5 }, 'ukraine': { id: 'ukraine', name: 'Ukraine', x: 56.5, y: 24.5 },
+        'turkish': { id: 'turkey', name: 'Turkey', x: 58.5, y: 31.0 }, 'turkey': { id: 'turkey', name: 'Turkey', x: 58.5, y: 31.0 },
+        'greek': { id: 'greece', name: 'Greece', x: 55.0, y: 32.5 }, 'greece': { id: 'greece', name: 'Greece', x: 55.0, y: 32.5 },
+        'romanian': { id: 'romania', name: 'Romania', x: 55.0, y: 26.5 }, 'romania': { id: 'romania', name: 'Romania', x: 55.0, y: 26.5 },
+        'bulgarian': { id: 'bulgaria', name: 'Bulgaria', x: 55.5, y: 30.0 }, 'bulgaria': { id: 'bulgaria', name: 'Bulgaria', x: 55.5, y: 30.0 },
+        'dutch': { id: 'netherlands', name: 'Netherlands', x: 49.0, y: 23.0 }, 'netherlands': { id: 'netherlands', name: 'Netherlands', x: 49.0, y: 23.0 },
+        'belgian': { id: 'belgium', name: 'Belgium', x: 48.5, y: 24.5 }, 'belgium': { id: 'belgium', name: 'Belgium', x: 48.5, y: 24.5 },
+        'swiss': { id: 'switzerland', name: 'Switzerland', x: 50.0, y: 28.0 }, 'switzerland': { id: 'switzerland', name: 'Switzerland', x: 50.0, y: 28.0 },
+        'austrian': { id: 'austria', name: 'Austria', x: 51.5, y: 27.0 }, 'austria': { id: 'austria', name: 'Austria', x: 51.5, y: 27.0 },
+        'czech': { id: 'czechia', name: 'Czechia', x: 52.0, y: 25.5 }, 'bohemian': { id: 'czechia', name: 'Czechia', x: 52.0, y: 25.5 },
+        'hungarian': { id: 'hungary', name: 'Hungary', x: 53.5, y: 27.5 }, 'hungary': { id: 'hungary', name: 'Hungary', x: 53.5, y: 27.5 },
+        'serbian': { id: 'serbia', name: 'Serbia', x: 54.0, y: 29.0 }, 'serbia': { id: 'serbia', name: 'Serbia', x: 54.0, y: 29.0 },
+        'balkan': { id: 'balkan', name: 'Balkan', x: 54.5, y: 29.5 }, 'croatian': { id: 'croatia', name: 'Croatia', x: 53.0, y: 29.0 }, 'croatia': { id: 'croatia', name: 'Croatia', x: 53.0, y: 29.0 },
+        'portuguese': { id: 'portugal', name: 'Portugal', x: 44.5, y: 32.0 }, 'portugal': { id: 'portugal', name: 'Portugal', x: 44.5, y: 32.0 },
+        'celtic': { id: 'celtic', name: 'Celtic', x: 45.0, y: 21.0 }, 'britain': { id: 'celtic', name: 'Celtic', x: 45.0, y: 21.0 },
+        'yiddish': { id: 'yiddish', name: 'Yiddish', x: 53.0, y: 24.0 }, 'klezmer': { id: 'yiddish', name: 'Yiddish', x: 53.0, y: 24.0 },
+        
+        // Americas
+        'american': { id: 'usa', name: 'USA', x: 23.5, y: 29.0 }, 'usa': { id: 'usa', name: 'USA', x: 23.5, y: 29.0 }, 'america': { id: 'usa', name: 'USA', x: 23.5, y: 29.0 },
+        'canadian': { id: 'canada', name: 'Canada', x: 24.0, y: 19.0 }, 'canada': { id: 'canada', name: 'Canada', x: 24.0, y: 19.0 },
+        'mexican': { id: 'mexico', name: 'Mexico', x: 20.0, y: 40.0 }, 'mexico': { id: 'mexico', name: 'Mexico', x: 20.0, y: 40.0 },
+        'brazilian': { id: 'brazil', name: 'Brazil', x: 34.0, y: 65.0 }, 'brazil': { id: 'brazil', name: 'Brazil', x: 34.0, y: 65.0 }, 'brasil': { id: 'brazil', name: 'Brazil', x: 34.0, y: 65.0 },
+        'argentinian': { id: 'argentina', name: 'Argentina', x: 31.0, y: 80.0 }, 'argentina': { id: 'argentina', name: 'Argentina', x: 31.0, y: 80.0 },
+        'columbian': { id: 'colombia', name: 'Colombia', x: 29.0, y: 53.0 }, 'colombia': { id: 'colombia', name: 'Colombia', x: 29.0, y: 53.0 }, 'colobian': { id: 'colombia', name: 'Colombia', x: 29.0, y: 53.0 },
+        'chilean': { id: 'chile', name: 'Chile', x: 27.5, y: 78.0 }, 'chile': { id: 'chile', name: 'Chile', x: 27.5, y: 78.0 },
+        
+        // Middle East & Africa & Asia
+        'arabic': { id: 'arabic', name: 'Arabic', x: 62.0, y: 42.0 }, 'arab': { id: 'arabic', name: 'Arabic', x: 62.0, y: 42.0 },
+        'israel': { id: 'israel', name: 'Israel', x: 59.0, y: 36.0 }, 'jewish': { id: 'israel', name: 'Israel', x: 59.0, y: 36.0 }, 'hebrew': { id: 'israel', name: 'Israel', x: 59.0, y: 36.0 },
+        'egyptian': { id: 'egypt', name: 'Egypt', x: 56.5, y: 38.0 }, 'egypt': { id: 'egypt', name: 'Egypt', x: 56.5, y: 38.0 }, 'egipt': { id: 'egypt', name: 'Egypt', x: 56.5, y: 38.0 },
+        'algerian': { id: 'algeria', name: 'Algeria', x: 48.0, y: 37.0 }, 'algeria': { id: 'algeria', name: 'Algeria', x: 48.0, y: 37.0 },
+        'south african': { id: 'south_africa', name: 'South Africa', x: 56.0, y: 78.0 }, 'south africa': { id: 'south_africa', name: 'South Africa', x: 56.0, y: 78.0 },
+        'japanese': { id: 'japan', name: 'Japan', x: 86.0, y: 34.0 }, 'japan': { id: 'japan', name: 'Japan', x: 86.0, y: 34.0 },
+        'chinese': { id: 'china', name: 'China', x: 77.0, y: 35.0 }, 'china': { id: 'china', name: 'China', x: 77.0, y: 35.0 },
+        'korean': { id: 'korea', name: 'Korea', x: 82.5, y: 33.0 }, 'korea': { id: 'korea', name: 'Korea', x: 82.5, y: 33.0 },
+        'indian': { id: 'india', name: 'India', x: 73.0, y: 44.0 }, 'india': { id: 'india', name: 'India', x: 73.0, y: 44.0 },
+        'australian': { id: 'australia', name: 'Australia', x: 87.0, y: 78.0 }, 'australia': { id: 'australia', name: 'Australia', x: 87.0, y: 78.0 }
+    };
+
+    if (regionsMap[key]) {
+        return regionsMap[key];
+    }
+    
+    // Fuzzy match fallback
+    const cleanKey = key.replace(/[^a-z]/g, '');
+    for (const [rKey, rCoords] of Object.entries(regionsMap)) {
+        if (cleanKey.includes(rKey) || rKey.includes(cleanKey)) {
+            return rCoords;
+        }
+    }
+    
+    // Unmapped fallback at the bottom ocean dock
+    let hash = 0;
+    for (let i = 0; i < key.length; i++) hash = key.charCodeAt(i) + ((hash << 5) - hash);
+    
+    return { 
+        id: key.replace(/[^a-z0-9]/g, ''), 
+        name: regionName,
+        x: 10 + (Math.abs(hash) % 80), 
+        y: 92 + (Math.abs(hash) % 4),  
+        isUnknown: true
+    };
+};
+
+const WorldMap = ({ sheets, activeId, onSelect }) => {
+    const [activeRegion, setActiveRegion] = useState(null);
+    const [hoveredRegion, setHoveredRegion] = useState(null);
+
+    const [scale, setScale] = useState(1);
+    const [position, setPosition] = useState({ x: 0, y: 0 });
+    const isDragging = useRef(false);
+    const dragStart = useRef({ x: 0, y: 0 });
+
+    const regions = useMemo(() => {
+        const groups = {};
+        sheets.forEach(sheet => {
+            const rData = getRegionData(sheet.region);
+            if (!groups[rData.id]) {
+                groups[rData.id] = { ...rData, sheets: [] };
+            }
+            groups[rData.id].sheets.push(sheet);
+        });
+        return Object.values(groups);
+    }, [sheets]);
+
+    const handlePointerDown = (e) => {
+        if (e.button !== 0 && e.pointerType === 'mouse') return;
+        isDragging.current = true;
+        dragStart.current = { x: e.clientX - position.x, y: e.clientY - position.y };
+    };
+
+    const handlePointerMove = (e) => {
+        if (!isDragging.current) return;
+        setPosition({
+            x: e.clientX - dragStart.current.x,
+            y: e.clientY - dragStart.current.y
+        });
+    };
+
+    const handlePointerUp = () => {
+        isDragging.current = false;
+    };
+
+    const handleWheel = (e) => {
+        const zoomSensitivity = 0.002;
+        setScale(s => Math.min(Math.max(1, s - e.deltaY * zoomSensitivity), 8));
+    };
+
+    const zoomIn = () => setScale(s => Math.min(s * 1.5, 8));
+    const zoomOut = () => {
+        setScale(s => {
+            const newScale = Math.max(s / 1.5, 1);
+            if (newScale === 1) setPosition({ x: 0, y: 0 });
+            return newScale;
+        });
+    };
 
     return (
-        <div 
-            className="fixed p-3 sm:p-4 text-xl sm:text-2xl text-gray-800 transform -rotate-1 pointer-events-none z-50 bg-[#fffac2] border border-[#d4cc7e] shadow-[2px_4px_10px_rgba(0,0,0,0.15)] rounded-[2px_10px_3px_8px_/_10px_2px_8px_3px]"
-            style={{ 
-                left: `${x}px`, 
-                top: `${y}px`,
-                width: 'max-content',
-                maxWidth: '280px'
-            }}
-        >
-            <div className="font-bold border-b border-gray-400 mb-2 pb-1 text-[#d94a38]">
-                {data.countriesTitle}
+        <div className="absolute inset-0 bg-[#060a13] flex flex-col overflow-hidden z-0 select-none">
+            
+            <div className="absolute bottom-6 right-6 z-50 flex flex-col space-y-2 bg-gray-900/80 backdrop-blur-md p-2 rounded-xl border border-gray-700 shadow-xl">
+                <button onClick={zoomIn} className="w-10 h-10 flex items-center justify-center text-2xl text-white hover:bg-gray-700 rounded-lg transition-colors">+</button>
+                <div className="w-full h-px bg-gray-700 my-1"></div>
+                <button onClick={zoomOut} className="w-10 h-10 flex items-center justify-center text-3xl text-white hover:bg-gray-700 rounded-lg transition-colors leading-none pb-1">-</button>
             </div>
-            <ul className="list-disc pl-5 leading-tight m-0">
-                {data.songs.map(song => (
-                    <li key={song.id}>{song.name}</li>
-                ))}
-            </ul>
+
+            <div 
+                className={`relative w-full h-full flex items-center justify-center ${isDragging.current ? 'cursor-grabbing' : 'cursor-grab'}`}
+                onPointerDown={handlePointerDown}
+                onPointerMove={handlePointerMove}
+                onPointerUp={handlePointerUp}
+                onPointerLeave={handlePointerUp}
+                onWheel={handleWheel}
+                onClick={() => setActiveRegion(null)}
+            >
+                <div 
+                    className="relative w-full max-w-7xl flex items-center justify-center transition-transform duration-75 origin-center"
+                    style={{ 
+                        transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
+                        touchAction: 'none'
+                    }}
+                >
+                    <div className="relative w-full shadow-2xl rounded-lg" style={{ aspectRatio: '1.97 / 1' }}>
+                        <div 
+                            className="absolute inset-0 pointer-events-none"
+                            style={{
+                                backgroundColor: '#3b82f6',
+                                opacity: 0.35,
+                                maskImage: 'url("https://upload.wikimedia.org/wikipedia/commons/e/ec/World_map_blank_without_borders.svg")',
+                                WebkitMaskImage: 'url("https://upload.wikimedia.org/wikipedia/commons/e/ec/World_map_blank_without_borders.svg")',
+                                maskSize: '100% 100%',
+                                WebkitMaskSize: '100% 100%',
+                                maskRepeat: 'no-repeat',
+                                WebkitMaskRepeat: 'no-repeat'
+                            }}
+                        ></div>
+                        
+                        {regions.map(region => {
+                            const isActive = activeRegion === region.id;
+                            const isHovered = hoveredRegion === region.id;
+                            const hasActiveSheet = region.sheets.some(s => s.id === activeId);
+                            const popupIsAbove = region.y > 60;
+
+                            return (
+                                <div 
+                                    key={region.id}
+                                    className="absolute pointer-events-auto"
+                                    style={{ left: `${region.x}%`, top: `${region.y}%` }}
+                                    onPointerDown={(e) => e.stopPropagation()}
+                                    onClick={(e) => { 
+                                        e.stopPropagation(); 
+                                        setActiveRegion(isActive ? null : region.id); 
+                                    }}
+                                    onMouseEnter={() => setHoveredRegion(region.id)}
+                                    onMouseLeave={() => setHoveredRegion(null)}
+                                >
+                                    <div 
+                                        className={`absolute -ml-1.5 -mt-1.5 rounded-full cursor-pointer transition-all duration-300 shadow-md ${isActive ? 'bg-blue-400 z-20 shadow-[0_0_15px_rgba(59,130,246,0.9)]' : hasActiveSheet ? 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]' : region.isUnknown ? 'bg-gray-500 hover:bg-gray-400 z-10' : 'bg-red-500 hover:bg-red-400 z-10'}`}
+                                        style={{
+                                            width: '12px',
+                                            height: '12px',
+                                            transform: `scale(${isActive ? 1.5 / scale : 1 / scale})`
+                                        }}
+                                    />
+
+                                    {isHovered && !isActive && (
+                                        <div 
+                                            className="absolute z-30 bg-gray-900/95 text-white text-xs font-bold px-2 py-1 rounded border border-gray-600 -translate-x-1/2 -translate-y-full mt-[-14px] whitespace-nowrap shadow-xl pointer-events-none"
+                                            style={{ transform: `translate(-50%, -100%) scale(${1 / scale})`, transformOrigin: 'bottom center' }}
+                                        >
+                                            {region.name} {region.isUnknown ? '(Unmapped)' : ''} <span className="text-gray-400 font-normal">({region.sheets.length})</span>
+                                            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-t-[5px] border-t-gray-600"></div>
+                                        </div>
+                                    )}
+                                    
+                                    {isActive && (
+                                        <div 
+                                            className={`absolute z-[100] bg-gray-900/95 backdrop-blur-md border border-gray-600 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.5)] p-3 w-56 sm:w-64 -translate-x-1/2 cursor-default ${popupIsAbove ? '-translate-y-full mt-[-20px]' : 'mt-[10px]'}`}
+                                            onClick={(e) => e.stopPropagation()}
+                                            style={{ transform: `scale(${1 / scale})`, transformOrigin: popupIsAbove ? 'bottom center' : 'top center' }}
+                                        >
+                                            <div className="flex justify-between items-center mb-2 border-b border-gray-700 pb-2">
+                                                <h3 className="text-sm font-bold text-white truncate pr-2">{region.name}</h3>
+                                                <button onClick={() => setActiveRegion(null)} className="text-gray-400 hover:text-white shrink-0 bg-gray-800 rounded p-0.5 transition-colors">
+                                                    <IconX className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                            <div className="max-h-48 overflow-y-auto hide-scrollbar flex flex-col space-y-1" onWheel={(e) => e.stopPropagation()}>
+                                                {region.sheets.map(sheet => (
+                                                    <button 
+                                                        key={sheet.id}
+                                                        onClick={() => onSelect(sheet.id)}
+                                                        className={`flex items-center space-x-3 text-left w-full px-2 py-1.5 rounded transition-colors group ${activeId === sheet.id ? 'bg-blue-600/40 text-blue-300' : 'hover:bg-gray-800 text-gray-300'}`}
+                                                    >
+                                                        <img src={sheet.url} alt="" className="w-8 h-10 object-cover rounded shadow-sm opacity-90 group-hover:opacity-100 shrink-0 bg-white" />
+                                                        <span className="text-xs font-medium group-hover:text-white truncate flex-1">{sheet.name}</span>
+                                                        {sheet.isFavorite && <IconHeart solid className="w-3.5 h-3.5 text-red-500 shrink-0" />}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                            
+                                            {popupIsAbove ? (
+                                                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-gray-600"></div>
+                                            ) : (
+                                                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-full w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[6px] border-b-gray-600"></div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            </div>
         </div>
     );
 };
 
-export default function App() {
-    const [worldData, setWorldData] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [hoveredCountry, setHoveredCountry] = useState(null); 
-    const [tooltipData, setTooltipData] = useState({ visible: false, x: 0, y: 0, data: null });
+const App = () => {
+    const CORRECT_PASSWORD = "folk"; 
+    const [isAuthenticated, setIsAuthenticated] = useState(() => {
+        return sessionStorage.getItem('folkAuth') === 'true';
+    });
+    const [passwordInput, setPasswordInput] = useState('');
+    const [loginError, setLoginError] = useState(false);
+
+    const [sheets, setSheets] = useState([]);
+    const [activeId, setActiveId] = useState(null);
     
-    // Firebase states
-    const [user, setUser] = useState(null);
-    const [rawLikes, setRawLikes] = useState([]);
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
     
-    const mapContainerRef = useRef(null);
-    const svgRef = useRef(null);
-    const zoomRef = useRef(null);
-    const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
-    const [zoomState, setZoomState] = useState({ k: 1, x: 0, y: 0 });
+    const [viewMode, setViewMode] = useState('viewer');
+    
+    const [metroPlaying, setMetroPlaying] = useState(false);
+    const [bpm, setBpm] = useState(100);
+
+    const touchStartX = useRef(0);
+    const touchEndX = useRef(0);
+
+    const displayedSheets = useMemo(() => {
+        let result = sheets;
+        if (showFavoritesOnly) {
+            result = result.filter(s => s.isFavorite);
+        }
+        if (searchQuery.trim() !== '') {
+            const query = searchQuery.toLowerCase();
+            result = result.filter(s => s.name.toLowerCase().includes(query));
+        }
+        return result;
+    }, [sheets, showFavoritesOnly, searchQuery]);
+
+    const activeIndex = useMemo(() => {
+        return displayedSheets.findIndex(s => s.id === activeId);
+    }, [displayedSheets, activeId]);
+
+    const activeSheet = displayedSheets[activeIndex];
 
     useEffect(() => {
-        // Authenticate silently to give user an ID for liking songs
-        const initAuth = async () => {
-            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                await signInWithCustomToken(auth, __initial_auth_token);
-            } else {
-                await signInAnonymously(auth);
-            }
-        };
-        initAuth();
-        
-        const unsubscribe = onAuthStateChanged(auth, setUser);
-        return () => unsubscribe();
-    }, []);
+        if (displayedSheets.length > 0 && activeIndex === -1 && isAuthenticated) {
+            setActiveId(displayedSheets[0].id);
+        }
+    }, [displayedSheets, activeIndex, isAuthenticated]);
+
+    const handleLogin = (e) => {
+        e.preventDefault();
+        if (passwordInput === CORRECT_PASSWORD) {
+            setIsAuthenticated(true);
+            sessionStorage.setItem('folkAuth', 'true');
+            setLoginError(false);
+        } else {
+            setLoginError(true);
+            setPasswordInput('');
+        }
+    };
 
     useEffect(() => {
-        if (!user) return;
+        if (!isAuthenticated) return;
+
+        const savedFavs = JSON.parse(localStorage.getItem('folkFavorites') || '[]');
+        const imageModules = import.meta.glob('./assets/images/*.{png,jpg,jpeg,gif,webp}', { eager: true, import: 'default' });
         
-        // Listen to all public likes in real-time
-        const likesRef = collection(db, 'artifacts', appId, 'public', 'data', 'song_likes');
-        const unsubscribe = onSnapshot(likesRef, (snapshot) => {
-            const fetchedLikes = [];
-            snapshot.forEach(doc => fetchedLikes.push(doc.data()));
-            setRawLikes(fetchedLikes);
-        }, (error) => {
-            console.error("Error fetching likes: ", error);
+        const loadedSheets = Object.entries(imageModules).map(([path, url]) => {
+            const filename = path.split('/').pop();
+            const name = filename.replace(/\.[^/.]+$/, "");
+            
+            const match = name.match(/\(([^)]+)\)/);
+            const region = match ? match[1].trim() : null;
+
+            return {
+                id: filename,
+                name: name,
+                url: url,
+                region: region,
+                isFavorite: savedFavs.includes(filename)
+            };
         });
 
-        return () => unsubscribe();
-    }, [user]);
+        loadedSheets.sort((a, b) => a.name.localeCompare(b.name));
+        setSheets(loadedSheets);
+        if (loadedSheets.length > 0) setActiveId(loadedSheets[0].id);
+    }, [isAuthenticated]);
 
-    const likesData = useMemo(() => {
-        const data = {};
-        rawLikes.forEach(like => {
-            if (!data[like.songId]) {
-                data[like.songId] = { count: 0, isLikedByMe: false };
-            }
-            data[like.songId].count++;
-            if (like.userId === user?.uid) {
-                data[like.songId].isLikedByMe = true;
-            }
-        });
-        return data;
-    }, [rawLikes, user]);
+    const goNext = () => {
+        if (displayedSheets.length === 0) return;
+        const nextIdx = (activeIndex + 1) % displayedSheets.length;
+        setActiveId(displayedSheets[nextIdx].id);
+    };
 
-    const markersData = useMemo(() => {
-        const mapData = {};
-        SONGS_DATA.forEach(song => {
-            const coords = GEO_DICT[song.country];
-            if (coords) {
-                const key = coords.join(",");
-                if (!mapData[key]) {
-                    mapData[key] = { coords: coords, countries: new Set(), songs: [] };
-                }
-                mapData[key].countries.add(song.country.replace('*', ''));
-                mapData[key].songs.push(song);
-            }
-        });
-        
-        return Object.values(mapData).map(item => ({
-            ...item,
-            countriesTitle: Array.from(item.countries).join(" / ")
-        }));
-    }, []);
+    const goPrev = () => {
+        if (displayedSheets.length === 0) return;
+        const prevIdx = (activeIndex - 1 + displayedSheets.length) % displayedSheets.length;
+        setActiveId(displayedSheets[prevIdx].id);
+    };
 
-    useEffect(() => {
-        d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson")
-            .then(data => { setWorldData(data); setLoading(false); })
-            .catch(err => { console.error(err); setLoading(false); });
-
-        const handleResize = () => {
-            if (mapContainerRef.current) {
-                setDimensions({
-                    width: mapContainerRef.current.clientWidth,
-                    height: mapContainerRef.current.clientHeight
-                });
-            }
-        };
-
-        handleResize();
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
-    }, []);
-
-    const projection = useMemo(() => {
-        return geoNaturalEarth1()
-            .scale(dimensions.width / 5.5)
-            .translate([dimensions.width / 2, dimensions.height / 2]);
-    }, [dimensions]);
-
-    const pathGenerator = useMemo(() => geoPath().projection(projection), [projection]);
-
-    useEffect(() => {
-        if (!svgRef.current) return;
-        const svg = d3.select(svgRef.current);
-        const zoom = d3.zoom()
-            .scaleExtent([0.5, 8])
-            .on("zoom", (event) => {
-                setZoomState({ k: event.transform.k, x: event.transform.x, y: event.transform.y });
-            });
-
-        svg.call(zoom);
-        zoomRef.current = zoom;
-    }, [dimensions]); 
-
-    const handleZoomToCountry = (countryStr) => {
-        const coords = GEO_DICT[countryStr];
-        if (coords && svgRef.current && zoomRef.current) {
-            const [x, y] = projection(coords);
-            const svg = d3.select(svgRef.current);
-            svg.transition().duration(1000).call(
-                zoomRef.current.transform,
-                d3.zoomIdentity
-                    .translate(dimensions.width / 2, dimensions.height / 2)
-                    .scale(3.5)
-                    .translate(-x, -y)
+    const toggleFavorite = (idToToggle) => {
+        setSheets(prev => {
+            const nextSheets = prev.map(s => 
+                s.id === idToToggle ? { ...s, isFavorite: !s.isFavorite } : s
             );
+            const favIds = nextSheets.filter(s => s.isFavorite).map(s => s.id);
+            localStorage.setItem('folkFavorites', JSON.stringify(favIds));
+            return nextSheets;
+        });
+    };
+
+    useEffect(() => {
+        if (!isAuthenticated) return;
+        const handleKeyDown = (e) => {
+            if (isMenuOpen) return;
+            if (e.key === 'ArrowRight') goNext();
+            if (e.key === 'ArrowLeft') goPrev();
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isAuthenticated, activeIndex, displayedSheets.length, isMenuOpen]);
+
+    const handleTouchStart = (e) => { touchStartX.current = e.targetTouches[0].clientX; };
+    const handleTouchMove = (e) => { touchEndX.current = e.targetTouches[0].clientX; };
+    const handleTouchEnd = () => {
+        if (!touchStartX.current || !touchEndX.current) return;
+        const distance = touchStartX.current - touchEndX.current;
+        if (distance > 50) goNext();
+        if (distance < -50) goPrev();
+        touchStartX.current = 0;
+        touchEndX.current = 0;
+    };
+
+    const toggleMetronome = () => {
+        if (metroPlaying) {
+            metronomeEngine.stop();
+            setMetroPlaying(false);
+        } else {
+            metronomeEngine.start();
+            setMetroPlaying(true);
         }
     };
 
-    const handleMarkerHover = (event, markerData) => {
-        let x = event.clientX + 15;
-        let y = event.clientY + 15;
-
-        // Smart tooltip positioning for mobile to prevent overflow
-        if (x + 280 > window.innerWidth) x = Math.max(10, event.clientX - 295);
-        if (y + 150 > window.innerHeight) y = Math.max(10, event.clientY - 165);
-
-        setTooltipData({ visible: true, x, y, data: markerData });
-        if(markerData.countries.size > 0) {
-            setHoveredCountry(Array.from(markerData.countries)[0]);
-        }
+    const handleBpmChange = (e) => {
+        const newBpm = parseInt(e.target.value);
+        setBpm(newBpm);
+        metronomeEngine.setBpm(newBpm);
     };
 
-    const handleMarkerOut = () => {
-        setTooltipData({ visible: false, x: 0, y: 0, data: null });
-        setHoveredCountry(null);
-    };
+    useEffect(() => { return () => metronomeEngine.stop(); }, []);
 
-    const handleMarkerClick = (event, markerData) => {
-        event.stopPropagation();
-        handleMarkerHover(event, markerData);
+    if (!isAuthenticated) {
+        return (
+            <div className="h-screen w-screen flex items-center justify-center bg-gray-950 text-gray-100 font-sans p-4">
+                <div className="max-w-md w-full bg-gray-900 border border-gray-800 rounded-2xl p-8 shadow-2xl flex flex-col items-center">
+                    <div className="w-16 h-16 bg-blue-600/20 text-blue-400 rounded-2xl flex items-center justify-center mb-6 border border-blue-500/30">
+                        <IconLock className="w-8 h-8" />
+                    </div>
+                    <h1 className="text-2xl font-bold tracking-tight mb-2">FolkRepertoire</h1>
+                    <p className="text-gray-400 text-sm text-center mb-6">Enter your password to access the sheet music collection.</p>
 
-        const [x, y] = projection(markerData.coords);
-        if (svgRef.current && zoomRef.current) {
-            const svg = d3.select(svgRef.current);
-            svg.transition().duration(750).call(
-                zoomRef.current.transform,
-                d3.zoomIdentity
-                    .translate(dimensions.width / 2, dimensions.height / 2)
-                    .scale(4)
-                    .translate(-x, -y)
-            );
-        }
-        if (markerData.songs.length > 0) {
-            const el = document.getElementById(`list-item-${markerData.songs[0].id}`);
-            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-    };
+                    <form onSubmit={handleLogin} className="w-full space-y-4">
+                        <div>
+                            <input 
+                                type="password" 
+                                placeholder="Password" 
+                                value={passwordInput}
+                                onChange={(e) => setPasswordInput(e.target.value)}
+                                className={`w-full px-4 py-3 bg-gray-950 border rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 transition-all ${loginError ? 'border-red-500 focus:ring-red-500' : 'border-gray-800 focus:ring-blue-500'}`}
+                                autoFocus
+                            />
+                            {loginError && (
+                                <p className="text-xs text-red-400 mt-2 ml-1">Incorrect password. Please try again.</p>
+                            )}
+                        </div>
 
-    const toggleLike = async (event, songId) => {
-        event.stopPropagation();
-        if (!user) return;
-        
-        const isLiked = likesData[songId]?.isLikedByMe;
-        const docId = `${songId}_${user.uid}`;
-        const likeRef = doc(db, 'artifacts', appId, 'public', 'data', 'song_likes', docId);
-        
-        try {
-            if (isLiked) {
-                await deleteDoc(likeRef);
-            } else {
-                await setDoc(likeRef, { songId, userId: user.uid });
-            }
-        } catch (error) {
-            console.error("Error toggling like:", error);
-        }
-    };
-
-    const isSongHovered = (songCountry) => {
-        if (!hoveredCountry) return false;
-        return hoveredCountry.replace('*', '') === songCountry.replace('*', '');
-    };
+                        <button 
+                            type="submit"
+                            className="w-full py-3 bg-blue-600 hover:bg-blue-500 active:scale-[0.98] transition-all font-semibold rounded-xl text-white shadow-lg shadow-blue-600/20"
+                        >
+                            Unlock Repertoire
+                        </button>
+                    </form>
+                </div>
+            </div>
+        );
+    }
 
     return (
-        <div className="map-app-container w-full h-[100dvh] flex flex-col md:flex-row overflow-hidden relative">
-            <GlobalStyles />
+        <div className="h-screen w-screen flex flex-col bg-gray-900 text-gray-100 font-sans overflow-hidden">
             
-            {/* Background Music Theme Decorations */}
-            <div className="clef">𝄞</div>
-            <div className="music-note" style={{ top: '10%', right: '15%', fontSize: '4rem', animationDelay: '0s' }}>♪</div>
-            <div className="music-note" style={{ top: '30%', left: '40%', fontSize: '3rem', animationDelay: '2s' }}>♫</div>
-            <div className="music-note" style={{ bottom: '20%', right: '30%', fontSize: '5rem', animationDelay: '1s' }}>♬</div>
-            <div className="music-note" style={{ bottom: '10%', left: '20%', fontSize: '3.5rem', animationDelay: '3s' }}>♩</div>
+            {isMenuOpen && (
+                <div 
+                    className="fixed inset-0 bg-black/60 z-40 backdrop-blur-sm transition-opacity" 
+                    onClick={() => setIsMenuOpen(false)}
+                ></div>
+            )}
 
-            <svg width="0" height="0" className="absolute pointer-events-none">
-                <defs>
-                    <filter id="sketched">
-                        <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="2" result="noise" />
-                        <feDisplacementMap in="SourceGraphic" in2="noise" scale="1.5" xChannelSelector="R" yChannelSelector="G" />
-                    </filter>
-                </defs>
-            </svg>
-
-            {/* Sidebar List */}
-            <div className="w-full md:w-1/3 lg:w-1/4 h-[45%] md:h-full order-2 md:order-1 border-t-4 md:border-t-0 md:border-r-4 border-dashed border-[#a6967f] flex flex-col p-2 sm:p-4 bg-white/70 backdrop-blur-md z-10 shadow-[0_-4px_10px_rgba(0,0,0,0.05)] md:shadow-xl relative">
-                
-                <div className="mb-2 sm:mb-6 text-center shrink-0 flex flex-col items-center">
-                    <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-[#d94a38] mb-1 leading-tight">
-                        TüFolk Tüfolkestra
-                    </h1>
-                    <h2 className="text-xl sm:text-2xl text-[#736351] m-0 font-semibold border-b-2 border-[#d94a38]/30 pb-2 inline-block">
-                        Repertoire
+            <div className={`fixed inset-y-0 left-0 w-80 max-w-[85vw] bg-gray-900 border-r border-gray-800 z-50 transform transition-transform duration-300 flex flex-col shadow-2xl ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+                <div className="p-4 border-b border-gray-800 flex justify-between items-center bg-gray-900 shrink-0">
+                    <h2 className="text-lg font-bold text-gray-100 flex items-center gap-2">
+                        <IconMusic className="w-5 h-5 text-blue-500" />
+                        Song List
                     </h2>
+                    <button onClick={() => setIsMenuOpen(false)} className="p-2 text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors">
+                        <IconX className="w-5 h-5" />
+                    </button>
                 </div>
                 
-                <div className="flex-1 overflow-y-auto pr-2 pb-4">
-                    {SONGS_DATA.map(song => {
-                        const hasCoords = !!GEO_DICT[song.country];
-                        const isHovered = isSongHovered(song.country);
-                        const songLikes = likesData[song.id] || { count: 0, isLikedByMe: false };
-                        
-                        return (
-                            <div 
-                                key={song.id}
-                                id={`list-item-${song.id}`}
-                                className={`song-item-transition p-3 mb-2 sketched-border cursor-pointer text-xl sm:text-2xl flex justify-between items-center group
-                                    ${isHovered ? 'bg-[#f7dfd4] border-[#d94a38] translate-x-1 shadow-sm' : 'bg-white/60 hover:bg-[rgba(217,74,56,0.15)] hover:translate-x-1 hover:border-[#d94a38]'}`}
-                                onMouseEnter={() => hasCoords && setHoveredCountry(song.country.replace('*',''))}
-                                onMouseLeave={() => hasCoords && setHoveredCountry(null)}
-                                onClick={() => hasCoords && handleZoomToCountry(song.country)}
+                <div className="p-4 border-b border-gray-800 space-y-4 bg-gray-900/50 shrink-0">
+                    <div className="relative">
+                        <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                        <input 
+                            type="text" 
+                            placeholder="Search repertoire..." 
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full bg-gray-950 border border-gray-700 rounded-lg py-2.5 pl-9 pr-4 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all shadow-inner"
+                        />
+                        {searchQuery && (
+                            <button 
+                                onClick={() => setSearchQuery('')}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
                             >
-                                <div className="flex-1 overflow-hidden flex items-start gap-2">
-                                    <span className="text-[#8c7a61] opacity-40 font-sans text-sm mt-1">🎵</span>
-                                    <div className="overflow-hidden">
-                                        <div className="font-bold whitespace-nowrap overflow-hidden text-ellipsis text-[#3e332a]" title={song.name}>
-                                            {song.id}. {song.name}
-                                        </div>
-                                        <div className="text-lg text-[#8c7a61] truncate">{song.country}</div>
-                                    </div>
-                                </div>
-                                <div className="ml-2 flex-shrink-0 flex items-center gap-3">
-                                    {/* Like Button */}
-                                    <button 
-                                        onClick={(e) => toggleLike(e, song.id)}
-                                        className={`like-button-anim flex items-center gap-1 transition-colors duration-200 outline-none
-                                            ${songLikes.isLikedByMe ? 'text-red-500' : 'text-[#a6967f] hover:text-red-400 opacity-60 group-hover:opacity-100'}`}
-                                        title={songLikes.isLikedByMe ? "Gefällt mir nicht mehr" : "Gefällt mir"}
-                                    >
-                                        <svg viewBox="0 0 24 24" fill={songLikes.isLikedByMe ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" className="w-6 h-6 sm:w-7 sm:h-7">
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
-                                        </svg>
-                                        {songLikes.count > 0 && (
-                                            <span className="text-lg sm:text-xl font-bold font-sans">{songLikes.count}</span>
-                                        )}
-                                    </button>
+                                <IconX className="w-4 h-4" />
+                            </button>
+                        )}
+                    </div>
+                    
+                    <label className="flex items-center space-x-2 text-sm text-gray-300 cursor-pointer select-none w-max">
+                        <input 
+                            type="checkbox" 
+                            checked={showFavoritesOnly} 
+                            onChange={(e) => setShowFavoritesOnly(e.target.checked)} 
+                            className="w-4 h-4 rounded bg-gray-900 border-gray-700 text-blue-500 focus:ring-blue-500 focus:ring-offset-gray-900 cursor-pointer" 
+                        />
+                        <span>Show Favorites Only</span>
+                    </label>
+                </div>
 
-                                    {/* Location Pin */}
-                                    {hasCoords ? (
-                                        <span className={`text-[#d94a38] transition-opacity ${isHovered ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>📍</span>
-                                    ) : (
-                                        <span className="text-gray-400 text-lg opacity-50" title="Keine Koordinaten">?</span>
-                                    )}
-                                </div>
-                            </div>
-                        );
-                    })}
+                <div className="flex-1 overflow-y-auto hide-scrollbar p-3 space-y-1 bg-gray-950/30">
+                    {displayedSheets.length === 0 ? (
+                        <div className="text-center text-gray-500 text-sm mt-8 flex flex-col items-center">
+                            <IconSearch className="w-8 h-8 mb-2 opacity-20" />
+                            No matching songs found.
+                        </div>
+                    ) : (
+                        displayedSheets.map(sheet => (
+                            <button
+                                key={sheet.id}
+                                onClick={() => {
+                                    setActiveId(sheet.id);
+                                    if (window.innerWidth < 768) setIsMenuOpen(false);
+                                }}
+                                className={`w-full text-left px-3 py-2.5 rounded-lg flex items-center justify-between group transition-colors ${activeId === sheet.id ? 'bg-blue-600/20 text-blue-400 font-medium border border-blue-500/30' : 'text-gray-300 hover:bg-gray-800 hover:text-white border border-transparent'}`}
+                            >
+                                <span className="truncate pr-2 text-sm">{sheet.name}</span>
+                                {sheet.isFavorite && <IconHeart solid={true} className={`w-4 h-4 shrink-0 ${activeId === sheet.id ? 'text-blue-400' : 'text-red-500 opacity-60 group-hover:opacity-100'}`} />}
+                            </button>
+                        ))
+                    )}
+                </div>
+                
+                <div className="p-3 border-t border-gray-800 text-xs font-mono text-gray-500 text-center bg-gray-900 shrink-0">
+                    {displayedSheets.length} {displayedSheets.length === 1 ? 'RESULT' : 'RESULTS'}
                 </div>
             </div>
 
-            {/* Map Area */}
-            <div ref={mapContainerRef} className="w-full md:w-2/3 lg:w-3/4 h-[55%] md:h-full order-1 md:order-2 relative cursor-move bg-transparent" onClick={handleMarkerOut}>
-                {loading && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-[#f4ecd8]/80 backdrop-blur-sm z-20">
-                        <p className="text-4xl animate-pulse text-[#8c7a61]">Zeichne Weltkarte...</p>
+            <div className="h-16 shrink-0 bg-gray-800 border-b border-gray-700 flex items-center justify-between px-3 sm:px-4 z-20 shadow-md">
+                <div className="flex items-center space-x-3">
+                    <button 
+                        onClick={() => setIsMenuOpen(true)}
+                        className="p-2 -ml-1 text-gray-300 hover:text-white hover:bg-gray-700 rounded-lg transition-colors active:scale-95"
+                    >
+                        <IconMenu className="w-6 h-6" />
+                    </button>
+                    
+                    <h1 className="font-bold text-lg hidden sm:block text-blue-400 truncate">Repertoire</h1>
+
+                    <button 
+                        onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+                        className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg transition-colors border ${showFavoritesOnly ? 'bg-red-900/30 text-red-400 border-red-500/30' : 'bg-gray-700/50 hover:bg-gray-600 border-transparent text-gray-300'}`}
+                    >
+                        <IconHeart solid={showFavoritesOnly} className="w-5 h-5" />
+                        <span className="text-sm font-medium hidden md:block">Favorites</span>
+                    </button>
+
+                    <div className="flex items-center bg-gray-900/80 p-1 rounded-lg border border-gray-700 ml-1 sm:ml-4 shadow-inner">
+                        <button 
+                            onClick={() => setViewMode('viewer')}
+                            className={`p-1.5 rounded-md transition-all ${viewMode === 'viewer' ? 'bg-blue-600 text-white shadow' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+                            title="Sheet Viewer"
+                        >
+                            <IconMusic className="w-4 h-4" />
+                        </button>
+                        <button 
+                            onClick={() => setViewMode('map')}
+                            className={`p-1.5 rounded-md transition-all ${viewMode === 'map' ? 'bg-blue-600 text-white shadow' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+                            title="World Map Overview"
+                        >
+                            <IconMap className="w-4 h-4" />
+                        </button>
                     </div>
+                </div>
+
+                <div className="flex items-center bg-gray-900/60 rounded-xl p-1 px-3 border border-gray-700 shadow-inner">
+                    <button 
+                        onClick={toggleMetronome}
+                        className={`w-8 h-8 flex items-center justify-center rounded-lg mr-3 transition-all ${metroPlaying ? 'bg-green-600 text-white shadow-[0_0_15px_rgba(22,163,74,0.5)]' : 'bg-gray-700 hover:bg-gray-600 text-gray-300'}`}
+                    >
+                        {metroPlaying ? (
+                            <div className="w-3 h-3 bg-white rounded-sm animate-pulse"></div>
+                        ) : (
+                            <svg className="w-4 h-4 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                        )}
+                    </button>
+                    <div className="flex flex-col w-20 sm:w-32">
+                        <div className="flex justify-between text-[10px] sm:text-xs text-gray-400 font-mono mb-1">
+                            <span>BPM</span>
+                            <span className="font-bold text-gray-200">{bpm}</span>
+                        </div>
+                        <input 
+                            type="range" min="40" max="240" 
+                            value={bpm} onChange={handleBpmChange}
+                            className="w-full h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                        />
+                    </div>
+                </div>
+            </div>
+
+            <div className="flex-1 relative flex items-center justify-center overflow-hidden bg-black outline-none" tabIndex="0">
+                {displayedSheets.length === 0 ? (
+                    <div className="text-gray-500 flex flex-col items-center">
+                        <IconMusic className="w-16 h-16 mb-4 opacity-20" />
+                        <p>No sheets found in this view.</p>
+                        {searchQuery && <p className="text-sm mt-2 text-gray-600">Try clearing your search.</p>}
+                    </div>
+                ) : viewMode === 'map' ? (
+                    <WorldMap 
+                        sheets={displayedSheets}
+                        activeId={activeId}
+                        onSelect={(id) => {
+                            setActiveId(id);
+                            setViewMode('viewer');
+                        }}
+                    />
+                ) : (
+                    <>
+                        <div className="absolute inset-y-0 left-0 w-1/6 md:w-32 z-10 flex items-center justify-start group cursor-pointer" onClick={goPrev}>
+                            <div className="ml-4 p-3 rounded-full bg-black/40 text-white opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm hidden md:block">
+                                <IconChevronLeft className="w-8 h-8" />
+                            </div>
+                        </div>
+
+                        <div className="absolute inset-y-0 right-0 w-1/6 md:w-32 z-10 flex items-center justify-end group cursor-pointer" onClick={goNext}>
+                            <div className="mr-4 p-3 rounded-full bg-black/40 text-white opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm hidden md:block">
+                                <IconChevronRight className="w-8 h-8" />
+                            </div>
+                        </div>
+
+                        {activeSheet && (
+                            <div 
+                                className="relative w-full h-full flex items-center justify-center p-2 sm:p-4"
+                                onTouchStart={handleTouchStart}
+                                onTouchMove={handleTouchMove}
+                                onTouchEnd={handleTouchEnd}
+                            >
+                                <img 
+                                    key={activeSheet.id}
+                                    src={activeSheet.url} 
+                                    alt={activeSheet.name} 
+                                    className="sheet-image max-w-full max-h-full object-contain rounded shadow-lg"
+                                    draggable="false"
+                                />
+                                
+                                <div className="absolute top-4 right-4 sm:top-6 sm:right-6 z-20 bg-gray-900/80 backdrop-blur-md px-4 py-2 rounded-xl flex items-center space-x-3 border border-gray-700/50 shadow-2xl">
+                                    <span className="font-semibold text-sm max-w-[150px] sm:max-w-md truncate">{activeSheet.name}</span>
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); toggleFavorite(activeSheet.id); }}
+                                        className={`p-1.5 rounded-full transition-transform active:scale-90 ${activeSheet.isFavorite ? 'text-red-500 bg-red-500/10' : 'text-gray-400 hover:text-white hover:bg-gray-700'}`}
+                                    >
+                                        <IconHeart solid={activeSheet.isFavorite} className="w-5 h-5" />
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </>
                 )}
+            </div>
 
-                <svg ref={svgRef} width="100%" height="100%" style={{ outline: 'none' }} className="relative z-10">
-                    <g filter="url(#sketched)" transform={`translate(${zoomState.x}, ${zoomState.y}) scale(${zoomState.k})`}>
-                        {worldData && worldData.features.map((feature, i) => (
-                            <path
-                                key={`country-${i}`}
-                                d={pathGenerator(feature) || ""}
-                                fill="#fdfaf3"
-                                stroke="#b5a48b"
-                                strokeWidth={1.5 / zoomState.k}
-                                strokeLinejoin="round"
-                                strokeLinecap="round"
-                            />
-                        ))}
-
-                        {worldData && markersData.map((marker, i) => {
-                            const [x, y] = projection(marker.coords);
-                            const isMarkerHovered = Array.from(marker.countries).some(c => hoveredCountry && c === hoveredCountry.replace('*', ''));
-                            
-                            const baseRadius = isMarkerHovered ? 8 : 4;
-                            const currentRadius = baseRadius / Math.sqrt(zoomState.k);
-                            const currentStrokeWidth = 1.5 / zoomState.k;
-                            
-                            return (
-                                <g
-                                    key={`marker-${i}`}
-                                    className="cursor-pointer"
-                                    transform={`translate(${x}, ${y})`}
-                                    onMouseEnter={(e) => handleMarkerHover(e, marker)}
-                                    onMouseLeave={handleMarkerOut}
-                                    onClick={(e) => handleMarkerClick(e, marker)}
-                                >
-                                    <circle
-                                        cx="0"
-                                        cy="0"
-                                        r={currentRadius}
-                                        fill={isMarkerHovered ? "#a72818" : "#d94a38"}
-                                        stroke="#3e332a"
-                                        strokeWidth={currentStrokeWidth}
-                                        style={{ transition: 'fill 0.2s ease, r 0.1s ease' }}
-                                    />
-                                    {/* Small note inside marker when zoomed in closely */}
-                                    {zoomState.k > 3 && (
-                                        <text
-                                            x="0"
-                                            y="0"
-                                            textAnchor="middle"
-                                            dominantBaseline="central"
-                                            fill="#fff"
-                                            fontSize={currentRadius * 1.2}
-                                            style={{ pointerEvents: 'none' }}
-                                        >
-                                            ♪
-                                        </text>
-                                    )}
-                                </g>
-                            );
-                        })}
-                    </g>
-                </svg>
-
-                <Tooltip visible={tooltipData.visible} x={tooltipData.x} y={tooltipData.y} data={tooltipData.data} />
+            <div className="h-24 sm:h-28 shrink-0 bg-gray-900 border-t border-gray-800 p-2 overflow-x-auto hide-scrollbar flex items-center space-x-2 sm:space-x-3 shadow-[0_-10px_20px_rgba(0,0,0,0.3)]">
+                {displayedSheets.map((sheet) => (
+                    <div 
+                        key={sheet.id}
+                        onClick={() => setActiveId(sheet.id)}
+                        className={`relative h-full shrink-0 w-16 sm:w-20 rounded-lg cursor-pointer transition-all duration-200 overflow-hidden ${sheet.id === activeId ? 'ring-2 ring-blue-500 scale-95 opacity-100' : 'opacity-50 hover:opacity-100'}`}
+                    >
+                        <img src={sheet.url} alt={sheet.name} className="w-full h-full object-cover" />
+                        <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/95 to-transparent p-1 pt-6">
+                            <p className="text-[9px] font-medium truncate text-center text-gray-300">{sheet.name}</p>
+                        </div>
+                        {sheet.isFavorite && (
+                            <div className="absolute top-1 right-1 text-red-500">
+                                <IconHeart solid={true} className="w-3 h-3 drop-shadow-md" />
+                            </div>
+                        )}
+                    </div>
+                ))}
             </div>
         </div>
     );
-}
+};
+
+export default App;
