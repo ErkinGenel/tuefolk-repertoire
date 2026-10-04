@@ -121,50 +121,51 @@ const getRegionData = (regionName) => {
     
     const key = regionName.toLowerCase().trim();
     
-    // Mathematically calculated coordinates (Longitude/Latitude converted to percentages)
-    // Formula: X = (Lon + 180)/360, Y = (90 - Lat)/150 (Map bounds roughly 90N to 60S)
+    // Visually calibrated coordinates for the Robinson Projection SVG Map (X: 0-100%, Y: 0-100%)
     const regionsMap = {
-        'german': { id: 'germany', name: 'Germany', x: 52.9, y: 25.8 }, 'germany': { id: 'germany', name: 'Germany', x: 52.9, y: 25.8 },
-        'french': { id: 'france', name: 'France', x: 50.6, y: 29.2 }, 'france': { id: 'france', name: 'France', x: 50.6, y: 29.2 },
-        'english': { id: 'uk', name: 'United Kingdom', x: 49.0, y: 23.1 }, 'uk': { id: 'uk', name: 'United Kingdom', x: 49.0, y: 23.1 }, 'england': { id: 'uk', name: 'United Kingdom', x: 49.0, y: 23.1 },
-        'ireland': { id: 'ireland', name: 'Ireland', x: 47.7, y: 24.6 }, 'irish': { id: 'ireland', name: 'Ireland', x: 47.7, y: 24.6 },
-        'scottish': { id: 'scotland', name: 'Scotland', x: 48.8, y: 22.3 }, 'scotland': { id: 'scotland', name: 'Scotland', x: 48.8, y: 22.3 },
-        'spanish': { id: 'spain', name: 'Spain', x: 48.9, y: 33.0 }, 'spain': { id: 'spain', name: 'Spain', x: 48.9, y: 33.0 },
-        'italian': { id: 'italy', name: 'Italy', x: 53.4, y: 32.1 }, 'italy': { id: 'italy', name: 'Italy', x: 53.4, y: 32.1 },
-        'swedish': { id: 'sweden', name: 'Sweden', x: 55.1, y: 19.9 }, 'sweden': { id: 'sweden', name: 'Sweden', x: 55.1, y: 19.9 },
-        'norwegian': { id: 'norway', name: 'Norway', x: 52.3, y: 19.7 }, 'norway': { id: 'norway', name: 'Norway', x: 52.3, y: 19.7 },
-        'danish': { id: 'denmark', name: 'Denmark', x: 52.6, y: 22.5 }, 'denmark': { id: 'denmark', name: 'Denmark', x: 52.6, y: 22.5 },
-        'finnish': { id: 'finland', name: 'Finland', x: 57.1, y: 18.7 }, 'finland': { id: 'finland', name: 'Finland', x: 57.1, y: 18.7 },
-        'russian': { id: 'russia', name: 'Russia', x: 79.2, y: 19.0 }, 'russia': { id: 'russia', name: 'Russia', x: 79.2, y: 19.0 },
-        'polish': { id: 'poland', name: 'Poland', x: 55.3, y: 25.4 }, 'poland': { id: 'poland', name: 'Poland', x: 55.3, y: 25.4 },
-        'ukrainian': { id: 'ukraine', name: 'Ukraine', x: 58.6, y: 27.8 }, 'ukraine': { id: 'ukraine', name: 'Ukraine', x: 58.6, y: 27.8 },
-        'turkish': { id: 'turkey', name: 'Turkey', x: 59.7, y: 34.0 }, 'turkey': { id: 'turkey', name: 'Turkey', x: 59.7, y: 34.0 },
-        'greek': { id: 'greece', name: 'Greece', x: 56.0, y: 34.0 }, 'greece': { id: 'greece', name: 'Greece', x: 56.0, y: 34.0 },
-        'arabic': { id: 'arabic', name: 'Arabic', x: 62.5, y: 44.1 },
-        'american': { id: 'usa', name: 'USA', x: 23.4, y: 35.3 }, 'usa': { id: 'usa', name: 'USA', x: 23.4, y: 35.3 },
-        'canadian': { id: 'canada', name: 'Canada', x: 20.4, y: 22.6 }, 'canada': { id: 'canada', name: 'Canada', x: 20.4, y: 22.6 },
-        'mexican': { id: 'mexico', name: 'Mexico', x: 21.5, y: 44.2 }, 'mexico': { id: 'mexico', name: 'Mexico', x: 21.5, y: 44.2 },
-        'brazilian': { id: 'brazil', name: 'Brazil', x: 35.5, y: 69.4 }, 'brazil': { id: 'brazil', name: 'Brazil', x: 35.5, y: 69.4 },
-        'argentinian': { id: 'argentina', name: 'Argentina', x: 32.3, y: 85.6 }, 'argentina': { id: 'argentina', name: 'Argentina', x: 32.3, y: 85.6 },
-        'japanese': { id: 'japan', name: 'Japan', x: 88.3, y: 35.8 }, 'japan': { id: 'japan', name: 'Japan', x: 88.3, y: 35.8 },
-        'chinese': { id: 'china', name: 'China', x: 78.9, y: 36.1 }, 'china': { id: 'china', name: 'China', x: 78.9, y: 36.1 },
-        'korean': { id: 'korea', name: 'Korea', x: 85.4, y: 36.0 }, 'korea': { id: 'korea', name: 'Korea', x: 85.4, y: 36.0 },
-        'indian': { id: 'india', name: 'India', x: 71.9, y: 46.3 }, 'india': { id: 'india', name: 'India', x: 71.9, y: 46.3 },
-        'australian': { id: 'australia', name: 'Australia', x: 87.1, y: 76.8 }, 'australia': { id: 'australia', name: 'Australia', x: 87.1, y: 76.8 },
-        'celtic': { id: 'celtic', name: 'Celtic', x: 48.3, y: 24.0 },
-        'yiddish': { id: 'yiddish', name: 'Yiddish', x: 56.9, y: 26.6 },
-        'israel': { id: 'israel', name: 'Israel', x: 59.6, y: 39.3 }, 'jewish': { id: 'israel', name: 'Israel', x: 59.6, y: 39.3 },
-        'dutch': { id: 'netherlands', name: 'Netherlands', x: 51.4, y: 25.2 }, 'netherlands': { id: 'netherlands', name: 'Netherlands', x: 51.4, y: 25.2 },
-        'belgian': { id: 'belgium', name: 'Belgium', x: 51.2, y: 26.3 }, 'belgium': { id: 'belgium', name: 'Belgium', x: 51.2, y: 26.3 },
-        'swiss': { id: 'switzerland', name: 'Switzerland', x: 52.2, y: 28.8 }, 'switzerland': { id: 'switzerland', name: 'Switzerland', x: 52.2, y: 28.8 },
-        'austrian': { id: 'austria', name: 'Austria', x: 54.0, y: 28.3 }, 'austria': { id: 'austria', name: 'Austria', x: 54.0, y: 28.3 },
-        'czech': { id: 'czechia', name: 'Czechia', x: 54.2, y: 26.8 },
-        'hungarian': { id: 'hungary', name: 'Hungary', x: 55.4, y: 28.6 }, 'hungary': { id: 'hungary', name: 'Hungary', x: 55.4, y: 28.6 },
-        'romanian': { id: 'romania', name: 'Romania', x: 56.9, y: 29.4 }, 'romania': { id: 'romania', name: 'Romania', x: 56.9, y: 29.4 },
-        'bulgarian': { id: 'bulgaria', name: 'Bulgaria', x: 57.0, y: 31.5 }, 'bulgaria': { id: 'bulgaria', name: 'Bulgaria', x: 57.0, y: 31.5 },
-        'serbian': { id: 'serbia', name: 'Serbia', x: 55.8, y: 30.6 }, 'serbia': { id: 'serbia', name: 'Serbia', x: 55.8, y: 30.6 },
-        'croatian': { id: 'croatia', name: 'Croatia', x: 54.2, y: 29.9 }, 'croatia': { id: 'croatia', name: 'Croatia', x: 54.2, y: 29.9 },
-        'portuguese': { id: 'portugal', name: 'Portugal', x: 47.7, y: 33.8 }, 'portugal': { id: 'portugal', name: 'Portugal', x: 47.7, y: 33.8 }
+        'german': { id: 'germany', name: 'Germany', x: 50, y: 29 }, 'germany': { id: 'germany', name: 'Germany', x: 50, y: 29 },
+        'french': { id: 'france', name: 'France', x: 48, y: 32 }, 'france': { id: 'france', name: 'France', x: 48, y: 32 },
+        'english': { id: 'uk', name: 'United Kingdom', x: 47, y: 28 }, 'uk': { id: 'uk', name: 'United Kingdom', x: 47, y: 28 }, 'england': { id: 'uk', name: 'United Kingdom', x: 47, y: 28 },
+        'ireland': { id: 'ireland', name: 'Ireland', x: 46, y: 28 }, 'irish': { id: 'ireland', name: 'Ireland', x: 46, y: 28 },
+        'scottish': { id: 'scotland', name: 'Scotland', x: 47, y: 26 }, 'scotland': { id: 'scotland', name: 'Scotland', x: 47, y: 26 },
+        'spanish': { id: 'spain', name: 'Spain', x: 47, y: 35 }, 'spain': { id: 'spain', name: 'Spain', x: 47, y: 35 },
+        'italian': { id: 'italy', name: 'Italy', x: 51, y: 34 }, 'italy': { id: 'italy', name: 'Italy', x: 51, y: 34 },
+        'swedish': { id: 'sweden', name: 'Sweden', x: 51, y: 20 }, 'sweden': { id: 'sweden', name: 'Sweden', x: 51, y: 20 },
+        'norwegian': { id: 'norway', name: 'Norway', x: 49, y: 20 }, 'norway': { id: 'norway', name: 'Norway', x: 49, y: 20 },
+        'danish': { id: 'denmark', name: 'Denmark', x: 50, y: 25 }, 'denmark': { id: 'denmark', name: 'Denmark', x: 50, y: 25 },
+        'finnish': { id: 'finland', name: 'Finland', x: 54, y: 20 }, 'finland': { id: 'finland', name: 'Finland', x: 54, y: 20 },
+        'russian': { id: 'russia', name: 'Russia', x: 70, y: 20 }, 'russia': { id: 'russia', name: 'Russia', x: 70, y: 20 },
+        'polish': { id: 'poland', name: 'Poland', x: 52, y: 29 }, 'poland': { id: 'poland', name: 'Poland', x: 52, y: 29 },
+        'ukrainian': { id: 'ukraine', name: 'Ukraine', x: 55, y: 30 }, 'ukraine': { id: 'ukraine', name: 'Ukraine', x: 55, y: 30 },
+        'turkish': { id: 'turkey', name: 'Turkey', x: 56, y: 36 }, 'turkey': { id: 'turkey', name: 'Turkey', x: 56, y: 36 },
+        'greek': { id: 'greece', name: 'Greece', x: 54, y: 38 }, 'greece': { id: 'greece', name: 'Greece', x: 54, y: 38 },
+        'arabic': { id: 'arabic', name: 'Arabic', x: 61, y: 45 },
+        'american': { id: 'usa', name: 'USA', x: 22, y: 35 }, 'usa': { id: 'usa', name: 'USA', x: 22, y: 35 },
+        'canadian': { id: 'canada', name: 'Canada', x: 23, y: 22 }, 'canada': { id: 'canada', name: 'Canada', x: 23, y: 22 },
+        'mexican': { id: 'mexico', name: 'Mexico', x: 18, y: 44 }, 'mexico': { id: 'mexico', name: 'Mexico', x: 18, y: 44 },
+        'brazilian': { id: 'brazil', name: 'Brazil', x: 32, y: 65 }, 'brazil': { id: 'brazil', name: 'Brazil', x: 32, y: 65 },
+        'argentinian': { id: 'argentina', name: 'Argentina', x: 30, y: 80 }, 'argentina': { id: 'argentina', name: 'Argentina', x: 30, y: 80 },
+        'japanese': { id: 'japan', name: 'Japan', x: 86, y: 38 }, 'japan': { id: 'japan', name: 'Japan', x: 86, y: 38 },
+        'chinese': { id: 'china', name: 'China', x: 75, y: 40 }, 'china': { id: 'china', name: 'China', x: 75, y: 40 },
+        'korean': { id: 'korea', name: 'Korea', x: 82, y: 38 }, 'korea': { id: 'korea', name: 'Korea', x: 82, y: 38 },
+        'indian': { id: 'india', name: 'India', x: 70, y: 48 }, 'india': { id: 'india', name: 'India', x: 70, y: 48 },
+        'australian': { id: 'australia', name: 'Australia', x: 85, y: 75 }, 'australia': { id: 'australia', name: 'Australia', x: 85, y: 75 },
+        'celtic': { id: 'celtic', name: 'Celtic', x: 46.5, y: 27 },
+        'yiddish': { id: 'yiddish', name: 'Yiddish', x: 53, y: 30 },
+        'israel': { id: 'israel', name: 'Israel', x: 58, y: 40 }, 'jewish': { id: 'israel', name: 'Israel', x: 58, y: 40 },
+        'dutch': { id: 'netherlands', name: 'Netherlands', x: 49.5, y: 29 }, 'netherlands': { id: 'netherlands', name: 'Netherlands', x: 49.5, y: 29 },
+        'belgian': { id: 'belgium', name: 'Belgium', x: 49, y: 30 }, 'belgium': { id: 'belgium', name: 'Belgium', x: 49, y: 30 },
+        'swiss': { id: 'switzerland', name: 'Switzerland', x: 50, y: 33 }, 'switzerland': { id: 'switzerland', name: 'Switzerland', x: 50, y: 33 },
+        'austrian': { id: 'austria', name: 'Austria', x: 51, y: 32 }, 'austria': { id: 'austria', name: 'Austria', x: 51, y: 32 },
+        'czech': { id: 'czechia', name: 'Czechia', x: 52, y: 31 },
+        'hungarian': { id: 'hungary', name: 'Hungary', x: 53, y: 32 }, 'hungary': { id: 'hungary', name: 'Hungary', x: 53, y: 32 },
+        'romanian': { id: 'romania', name: 'Romania', x: 55, y: 33 }, 'romania': { id: 'romania', name: 'Romania', x: 55, y: 33 },
+        'bulgarian': { id: 'bulgaria', name: 'Bulgaria', x: 55, y: 35 }, 'bulgaria': { id: 'bulgaria', name: 'Bulgaria', x: 55, y: 35 },
+        'serbian': { id: 'serbia', name: 'Serbia', x: 53, y: 34 }, 'serbia': { id: 'serbia', name: 'Serbia', x: 53, y: 34 },
+        'croatian': { id: 'croatia', name: 'Croatia', x: 52, y: 34 }, 'croatia': { id: 'croatia', name: 'Croatia', x: 52, y: 34 },
+        'portuguese': { id: 'portugal', name: 'Portugal', x: 46, y: 36 }, 'portugal': { id: 'portugal', name: 'Portugal', x: 46, y: 36 },
+        'egyptian': { id: 'egypt', name: 'Egypt', x: 55, y: 43 }, 'egypt': { id: 'egypt', name: 'Egypt', x: 55, y: 43 },
+        'south african': { id: 'south_africa', name: 'South Africa', x: 55, y: 75 }, 'south africa': { id: 'south_africa', name: 'South Africa', x: 55, y: 75 }
     };
 
     if (regionsMap[key]) {
@@ -194,6 +195,12 @@ const WorldMap = ({ sheets, activeId, onSelect }) => {
     const [activeRegion, setActiveRegion] = useState(null);
     const [hoveredRegion, setHoveredRegion] = useState(null);
 
+    // Zoom and Pan States
+    const [scale, setScale] = useState(1);
+    const [position, setPosition] = useState({ x: 0, y: 0 });
+    const isDragging = useRef(false);
+    const dragStart = useRef({ x: 0, y: 0 });
+
     // Group individual sheets into Country/Region buckets
     const regions = useMemo(() => {
         const groups = {};
@@ -207,97 +214,166 @@ const WorldMap = ({ sheets, activeId, onSelect }) => {
         return Object.values(groups);
     }, [sheets]);
 
+    // Pointer Events for unified Mouse and Touch dragging
+    const handlePointerDown = (e) => {
+        if (e.button !== 0 && e.pointerType === 'mouse') return; // Only left click for mouse
+        isDragging.current = true;
+        dragStart.current = { x: e.clientX - position.x, y: e.clientY - position.y };
+        e.currentTarget.setPointerCapture(e.pointerId);
+    };
+
+    const handlePointerMove = (e) => {
+        if (!isDragging.current) return;
+        setPosition({
+            x: e.clientX - dragStart.current.x,
+            y: e.clientY - dragStart.current.y
+        });
+    };
+
+    const handlePointerUp = (e) => {
+        isDragging.current = false;
+        e.currentTarget.releasePointerCapture(e.pointerId);
+    };
+
+    // Wheel event for smooth zooming
+    const handleWheel = (e) => {
+        const zoomSensitivity = 0.002;
+        setScale(s => Math.min(Math.max(1, s - e.deltaY * zoomSensitivity), 8));
+    };
+
+    // UI Buttons for Zooming
+    const zoomIn = () => setScale(s => Math.min(s * 1.5, 8));
+    const zoomOut = () => {
+        setScale(s => {
+            const newScale = Math.max(s / 1.5, 1);
+            if (newScale === 1) setPosition({ x: 0, y: 0 }); // Reset position when fully zoomed out
+            return newScale;
+        });
+    };
+
     return (
-        <div 
-            className="absolute inset-0 bg-[#060a13] flex flex-col items-center justify-center overflow-hidden z-0"
-            onClick={() => setActiveRegion(null)}
-        >
-            {/* The Unified Coordinate Container - Locks Map and Pins to exactly 1.97:1 ratio */}
-            <div className="relative w-full max-w-6xl px-2 sm:px-8 flex items-center justify-center pointer-events-none">
-                
-                <div className="relative w-full shadow-2xl rounded-lg" style={{ aspectRatio: '1.97 / 1' }}>
-                    
-                    {/* High-quality World Map via WebKit Mask (Reliable, high-res Wikimedia base) */}
-                    <div 
-                        className="absolute inset-0 pointer-events-none transition-opacity duration-700"
-                        style={{
-                            backgroundColor: '#3b82f6', // Tailwind blue-500
-                            opacity: 0.35,
-                            maskImage: 'url("https://upload.wikimedia.org/wikipedia/commons/e/ec/World_map_blank_without_borders.svg")',
-                            WebkitMaskImage: 'url("https://upload.wikimedia.org/wikipedia/commons/e/ec/World_map_blank_without_borders.svg")',
-                            maskSize: '100% 100%',
-                            WebkitMaskSize: '100% 100%',
-                            maskRepeat: 'no-repeat',
-                            WebkitMaskRepeat: 'no-repeat'
-                        }}
-                    ></div>
-                    
-                    {/* Overlay Pins */}
-                    {regions.map(region => {
-                        const isActive = activeRegion === region.id;
-                        const isHovered = hoveredRegion === region.id;
-                        const hasActiveSheet = region.sheets.some(s => s.id === activeId);
-                        const popupIsAbove = region.y > 60; // Southern hemisphere opens up
+        <div className="absolute inset-0 bg-[#060a13] flex flex-col overflow-hidden z-0 select-none">
+            
+            {/* Zoom Controls Overlay */}
+            <div className="absolute bottom-6 right-6 z-50 flex flex-col space-y-2 bg-gray-900/80 backdrop-blur-md p-2 rounded-xl border border-gray-700 shadow-xl">
+                <button onClick={zoomIn} className="w-10 h-10 flex items-center justify-center text-2xl text-white hover:bg-gray-700 rounded-lg transition-colors">+</button>
+                <div className="w-full h-px bg-gray-700 my-1"></div>
+                <button onClick={zoomOut} className="w-10 h-10 flex items-center justify-center text-3xl text-white hover:bg-gray-700 rounded-lg transition-colors leading-none pb-1">-</button>
+            </div>
 
-                        return (
-                            <div 
-                                key={region.id}
-                                className="absolute pointer-events-auto"
-                                style={{ left: `${region.x}%`, top: `${region.y}%` }}
-                                onClick={(e) => { e.stopPropagation(); setActiveRegion(isActive ? null : region.id); }}
-                                onMouseEnter={() => setHoveredRegion(region.id)}
-                                onMouseLeave={() => setHoveredRegion(null)}
-                            >
-                                {/* Region Country Dot */}
+            {/* Draggable Map Container */}
+            <div 
+                className={`relative w-full h-full flex items-center justify-center ${isDragging.current ? 'cursor-grabbing' : 'cursor-grab'}`}
+                onPointerDown={handlePointerDown}
+                onPointerMove={handlePointerMove}
+                onPointerUp={handlePointerUp}
+                onPointerCancel={handlePointerUp}
+                onWheel={handleWheel}
+                onClick={() => setActiveRegion(null)}
+            >
+                {/* The Transformation Layer */}
+                <div 
+                    className="relative w-full max-w-7xl flex items-center justify-center transition-transform duration-75 origin-center"
+                    style={{ 
+                        transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
+                        touchAction: 'none' // Prevents native scrolling while panning
+                    }}
+                >
+                    
+                    {/* The Unified Coordinate Container - Locks Map and Pins to exactly 1.97:1 ratio */}
+                    <div className="relative w-full shadow-2xl rounded-lg" style={{ aspectRatio: '1.97 / 1' }}>
+                        
+                        {/* High-quality World Map (Robinson Projection) via WebKit Mask */}
+                        <div 
+                            className="absolute inset-0 pointer-events-none"
+                            style={{
+                                backgroundColor: '#3b82f6', // Tailwind blue-500
+                                opacity: 0.35,
+                                maskImage: 'url("https://upload.wikimedia.org/wikipedia/commons/e/ec/World_map_blank_without_borders.svg")',
+                                WebkitMaskImage: 'url("https://upload.wikimedia.org/wikipedia/commons/e/ec/World_map_blank_without_borders.svg")',
+                                maskSize: '100% 100%',
+                                WebkitMaskSize: '100% 100%',
+                                maskRepeat: 'no-repeat',
+                                WebkitMaskRepeat: 'no-repeat'
+                            }}
+                        ></div>
+                        
+                        {/* Overlay Pins */}
+                        {regions.map(region => {
+                            const isActive = activeRegion === region.id;
+                            const isHovered = hoveredRegion === region.id;
+                            const hasActiveSheet = region.sheets.some(s => s.id === activeId);
+                            const popupIsAbove = region.y > 60; // Southern hemisphere opens up
+
+                            return (
                                 <div 
-                                    className={`absolute w-3.5 h-3.5 md:w-5 md:h-5 -ml-1.5 -mt-1.5 md:-ml-2.5 md:-mt-2.5 rounded-full cursor-pointer transition-all duration-300 shadow-md ${isActive ? 'bg-blue-400 scale-[1.5] md:scale-150 z-20 shadow-[0_0_15px_rgba(59,130,246,0.9)]' : hasActiveSheet ? 'bg-blue-500 scale-125 shadow-[0_0_8px_rgba(59,130,246,0.8)]' : 'bg-red-500 hover:bg-red-400 hover:scale-150 z-10'}`}
-                                />
-
-                                {/* Hover Label */}
-                                {isHovered && !isActive && (
-                                    <div className="absolute z-30 bg-gray-900/95 text-white text-xs font-bold px-2 py-1 rounded border border-gray-600 -translate-x-1/2 -translate-y-full mt-[-14px] whitespace-nowrap shadow-xl pointer-events-none">
-                                        {region.name} <span className="text-gray-400 font-normal">({region.sheets.length})</span>
-                                        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-t-[5px] border-t-gray-600"></div>
-                                    </div>
-                                )}
-                                
-                                {/* Active Click Popup Menu (List of Songs) */}
-                                {isActive && (
+                                    key={region.id}
+                                    className="absolute pointer-events-auto"
+                                    style={{ left: `${region.x}%`, top: `${region.y}%` }}
+                                    onClick={(e) => { e.stopPropagation(); setActiveRegion(isActive ? null : region.id); }}
+                                    onMouseEnter={() => setHoveredRegion(region.id)}
+                                    onMouseLeave={() => setHoveredRegion(null)}
+                                >
+                                    {/* Region Country Dot (Scales inversely to maintain size when zoomed in) */}
                                     <div 
-                                        className={`absolute z-40 bg-gray-900/95 backdrop-blur-md border border-gray-600 rounded-xl shadow-2xl p-3 w-56 sm:w-64 -translate-x-1/2 cursor-default ${popupIsAbove ? '-translate-y-full -mt-5' : 'mt-5'}`}
-                                        onClick={(e) => e.stopPropagation()}
-                                    >
-                                        <div className="flex justify-between items-center mb-2 border-b border-gray-700 pb-2">
-                                            <h3 className="text-sm font-bold text-white truncate pr-2">{region.name}</h3>
-                                            <button onClick={() => setActiveRegion(null)} className="text-gray-400 hover:text-white shrink-0 bg-gray-800 rounded p-0.5 transition-colors">
-                                                <IconX className="w-4 h-4" />
-                                            </button>
+                                        className={`absolute -ml-1.5 -mt-1.5 rounded-full cursor-pointer transition-all duration-300 shadow-md ${isActive ? 'bg-blue-400 z-20 shadow-[0_0_15px_rgba(59,130,246,0.9)]' : hasActiveSheet ? 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]' : 'bg-red-500 hover:bg-red-400 z-10'}`}
+                                        style={{
+                                            width: '12px',
+                                            height: '12px',
+                                            transform: `scale(${isActive ? 1.5 / scale : 1 / scale})`
+                                        }}
+                                    />
+
+                                    {/* Hover Label */}
+                                    {isHovered && !isActive && (
+                                        <div 
+                                            className="absolute z-30 bg-gray-900/95 text-white text-xs font-bold px-2 py-1 rounded border border-gray-600 -translate-x-1/2 -translate-y-full mt-[-14px] whitespace-nowrap shadow-xl pointer-events-none"
+                                            style={{ transform: `translate(-50%, -100%) scale(${1 / scale})`, transformOrigin: 'bottom center' }}
+                                        >
+                                            {region.name} <span className="text-gray-400 font-normal">({region.sheets.length})</span>
+                                            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-t-[5px] border-t-gray-600"></div>
                                         </div>
-                                        <div className="max-h-48 overflow-y-auto hide-scrollbar flex flex-col space-y-1">
-                                            {region.sheets.map(sheet => (
-                                                <button 
-                                                    key={sheet.id}
-                                                    onClick={() => onSelect(sheet.id)}
-                                                    className={`flex items-center space-x-3 text-left w-full px-2 py-1.5 rounded transition-colors group ${activeId === sheet.id ? 'bg-blue-600/40 text-blue-300' : 'hover:bg-gray-800 text-gray-300'}`}
-                                                >
-                                                    <img src={sheet.url} alt="" className="w-8 h-10 object-cover rounded shadow-sm opacity-90 group-hover:opacity-100 shrink-0 bg-white" />
-                                                    <span className="text-xs font-medium group-hover:text-white truncate flex-1">{sheet.name}</span>
-                                                    {sheet.isFavorite && <IconHeart solid className="w-3.5 h-3.5 text-red-500 shrink-0" />}
+                                    )}
+                                    
+                                    {/* Active Click Popup Menu (List of Songs) */}
+                                    {isActive && (
+                                        <div 
+                                            className={`absolute z-40 bg-gray-900/95 backdrop-blur-md border border-gray-600 rounded-xl shadow-2xl p-3 w-56 sm:w-64 -translate-x-1/2 cursor-default ${popupIsAbove ? '-translate-y-full mt-[-20px]' : 'mt-[10px]'}`}
+                                            onClick={(e) => e.stopPropagation()}
+                                            style={{ transform: `scale(${1 / scale})`, transformOrigin: popupIsAbove ? 'bottom center' : 'top center' }}
+                                        >
+                                            <div className="flex justify-between items-center mb-2 border-b border-gray-700 pb-2">
+                                                <h3 className="text-sm font-bold text-white truncate pr-2">{region.name}</h3>
+                                                <button onClick={() => setActiveRegion(null)} className="text-gray-400 hover:text-white shrink-0 bg-gray-800 rounded p-0.5 transition-colors">
+                                                    <IconX className="w-4 h-4" />
                                                 </button>
-                                            ))}
+                                            </div>
+                                            <div className="max-h-48 overflow-y-auto hide-scrollbar flex flex-col space-y-1" onWheel={(e) => e.stopPropagation()}>
+                                                {region.sheets.map(sheet => (
+                                                    <button 
+                                                        key={sheet.id}
+                                                        onClick={() => onSelect(sheet.id)}
+                                                        className={`flex items-center space-x-3 text-left w-full px-2 py-1.5 rounded transition-colors group ${activeId === sheet.id ? 'bg-blue-600/40 text-blue-300' : 'hover:bg-gray-800 text-gray-300'}`}
+                                                    >
+                                                        <img src={sheet.url} alt="" className="w-8 h-10 object-cover rounded shadow-sm opacity-90 group-hover:opacity-100 shrink-0 bg-white" />
+                                                        <span className="text-xs font-medium group-hover:text-white truncate flex-1">{sheet.name}</span>
+                                                        {sheet.isFavorite && <IconHeart solid className="w-3.5 h-3.5 text-red-500 shrink-0" />}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                            
+                                            {/* Smart pointer arrows for popup orientation */}
+                                            {popupIsAbove ? (
+                                                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-gray-600"></div>
+                                            ) : (
+                                                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-full w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[6px] border-b-gray-600"></div>
+                                            )}
                                         </div>
-                                        
-                                        {/* Smart pointer arrows for popup orientation */}
-                                        {popupIsAbove ? (
-                                            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-gray-600"></div>
-                                        ) : (
-                                            <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-full w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[6px] border-b-gray-600"></div>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                        );
-                    })}
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
                 </div>
             </div>
         </div>
