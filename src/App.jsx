@@ -104,7 +104,6 @@ const soundModules = import.meta.glob('./assets/sounds/**/*.{mp4,wav}', { eager:
 
 const normalize = (s) =>
     s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
-const baseTitle = (name) => name.replace(/\([^)]*\)/g, '').replace(/\*/g, '').trim();
 const formatTime = (t) => {
     if (!isFinite(t)) return '0:00';
     const m = Math.floor(t / 60);
@@ -502,7 +501,7 @@ const App = () => {
         sheets.forEach(s => { result[s.id] = []; });
         const keysFor = sheets.map(s => ({
             id: s.id,
-            keys: [normalize(s.name), normalize(baseTitle(s.name))].filter(Boolean),
+            keys: [normalize(s.name)].filter(Boolean),
         }));
         ALL_SOUNDS.forEach(sound => {
             let best = null, bestScore = 0;
