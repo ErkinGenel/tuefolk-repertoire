@@ -114,107 +114,103 @@ class Metronome {
 
 const metronomeEngine = new Metronome();
 
-const getMapCoordinates = (id, regionName) => {
-    // Generate a deterministic hash based on the song's filename
-    let hash = 0;
-    for (let i = 0; i < id.length; i++) {
-        hash = id.charCodeAt(i) + ((hash << 5) - hash);
+const getRegionData = (regionName) => {
+    if (!regionName) {
+        return { id: 'unspecified', name: 'Unspecified', x: 15, y: 80 };
     }
     
-    // Deterministic offset (-2% to +2%) to prevent exact overlapping of pins in the same country
-    const offsetX = ((Math.abs(hash * 31) % 40) / 10) - 2;
-    const offsetY = ((Math.abs(hash * 73) % 40) / 10) - 2;
-
+    const key = regionName.toLowerCase().trim();
+    
+    // Normalized list mapping directly to singular regions
     const regionsMap = {
-        'german': { x: 51, y: 27 }, 'germany': { x: 51, y: 27 },
-        'french': { x: 48.5, y: 29 }, 'france': { x: 48.5, y: 29 },
-        'english': { x: 47, y: 26 }, 'uk': { x: 47, y: 26 }, 'england': { x: 47, y: 26 },
-        'ireland': { x: 46, y: 26 }, 'irish': { x: 46, y: 26 },
-        'scottish': { x: 46.5, y: 25 }, 'scotland': { x: 46.5, y: 25 },
-        'spanish': { x: 47, y: 32 }, 'spain': { x: 47, y: 32 },
-        'italian': { x: 51, y: 32 }, 'italy': { x: 51, y: 32 },
-        'swedish': { x: 52, y: 20 }, 'sweden': { x: 52, y: 20 },
-        'norwegian': { x: 50.5, y: 20 }, 'norway': { x: 50.5, y: 20 },
-        'danish': { x: 51, y: 24 }, 'denmark': { x: 51, y: 24 },
-        'finnish': { x: 54, y: 19 }, 'finland': { x: 54, y: 19 },
-        'russian': { x: 65, y: 22 }, 'russia': { x: 65, y: 22 },
-        'polish': { x: 53, y: 26 }, 'poland': { x: 53, y: 26 },
-        'ukrainian': { x: 56, y: 27 }, 'ukraine': { x: 56, y: 27 },
-        'turkish': { x: 57, y: 33 }, 'turkey': { x: 57, y: 33 },
-        'greek': { x: 54, y: 34 }, 'greece': { x: 54, y: 34 },
-        'arabic': { x: 58, y: 40 },
-        'american': { x: 22, y: 32 }, 'usa': { x: 22, y: 32 },
-        'canadian': { x: 22, y: 25 }, 'canada': { x: 22, y: 25 },
-        'mexican': { x: 19, y: 43 }, 'mexico': { x: 19, y: 43 },
-        'brazilian': { x: 32, y: 62 }, 'brazil': { x: 32, y: 62 },
-        'argentinian': { x: 28, y: 75 }, 'argentina': { x: 28, y: 75 },
-        'japanese': { x: 86, y: 32 }, 'japan': { x: 86, y: 32 },
-        'chinese': { x: 78, y: 35 }, 'china': { x: 78, y: 35 },
-        'korean': { x: 83, y: 33 }, 'korea': { x: 83, y: 33 },
-        'indian': { x: 70, y: 42 }, 'india': { x: 70, y: 42 },
-        'australian': { x: 85, y: 75 }, 'australia': { x: 85, y: 75 },
-        'celtic': { x: 46.5, y: 26 },
-        'yiddish': { x: 54, y: 27 },
-        'israel': { x: 58, y: 36 }, 'jewish': { x: 58, y: 36 },
-        'dutch': { x: 49, y: 26 }, 'netherlands': { x: 49, y: 26 },
-        'belgian': { x: 49, y: 27 }, 'belgium': { x: 49, y: 27 },
-        'swiss': { x: 50, y: 29 }, 'switzerland': { x: 50, y: 29 },
-        'austrian': { x: 52, y: 29 }, 'austria': { x: 52, y: 29 },
-        'czech': { x: 53, y: 27 },
-        'hungarian': { x: 54, y: 29 }, 'hungary': { x: 54, y: 29 },
-        'romanian': { x: 55, y: 30 }, 'romania': { x: 55, y: 30 },
-        'bulgarian': { x: 56, y: 32 }, 'bulgaria': { x: 56, y: 32 },
-        'serbian': { x: 54, y: 31 }, 'serbia': { x: 54, y: 31 },
-        'croatian': { x: 53, y: 31 }, 'croatia': { x: 53, y: 31 },
-        'portuguese': { x: 46, y: 33 }, 'portugal': { x: 46, y: 33 }
+        'german': { id: 'germany', name: 'Germany', x: 51, y: 27 }, 'germany': { id: 'germany', name: 'Germany', x: 51, y: 27 },
+        'french': { id: 'france', name: 'France', x: 48.5, y: 29 }, 'france': { id: 'france', name: 'France', x: 48.5, y: 29 },
+        'english': { id: 'uk', name: 'United Kingdom', x: 47, y: 26 }, 'uk': { id: 'uk', name: 'United Kingdom', x: 47, y: 26 }, 'england': { id: 'uk', name: 'United Kingdom', x: 47, y: 26 },
+        'ireland': { id: 'ireland', name: 'Ireland', x: 46, y: 26 }, 'irish': { id: 'ireland', name: 'Ireland', x: 46, y: 26 },
+        'scottish': { id: 'scotland', name: 'Scotland', x: 46.5, y: 25 }, 'scotland': { id: 'scotland', name: 'Scotland', x: 46.5, y: 25 },
+        'spanish': { id: 'spain', name: 'Spain', x: 47, y: 32 }, 'spain': { id: 'spain', name: 'Spain', x: 47, y: 32 },
+        'italian': { id: 'italy', name: 'Italy', x: 51, y: 32 }, 'italy': { id: 'italy', name: 'Italy', x: 51, y: 32 },
+        'swedish': { id: 'sweden', name: 'Sweden', x: 52, y: 20 }, 'sweden': { id: 'sweden', name: 'Sweden', x: 52, y: 20 },
+        'norwegian': { id: 'norway', name: 'Norway', x: 50.5, y: 20 }, 'norway': { id: 'norway', name: 'Norway', x: 50.5, y: 20 },
+        'danish': { id: 'denmark', name: 'Denmark', x: 51, y: 24 }, 'denmark': { id: 'denmark', name: 'Denmark', x: 51, y: 24 },
+        'finnish': { id: 'finland', name: 'Finland', x: 54, y: 19 }, 'finland': { id: 'finland', name: 'Finland', x: 54, y: 19 },
+        'russian': { id: 'russia', name: 'Russia', x: 65, y: 22 }, 'russia': { id: 'russia', name: 'Russia', x: 65, y: 22 },
+        'polish': { id: 'poland', name: 'Poland', x: 53, y: 26 }, 'poland': { id: 'poland', name: 'Poland', x: 53, y: 26 },
+        'ukrainian': { id: 'ukraine', name: 'Ukraine', x: 56, y: 27 }, 'ukraine': { id: 'ukraine', name: 'Ukraine', x: 56, y: 27 },
+        'turkish': { id: 'turkey', name: 'Turkey', x: 57, y: 33 }, 'turkey': { id: 'turkey', name: 'Turkey', x: 57, y: 33 },
+        'greek': { id: 'greece', name: 'Greece', x: 54, y: 34 }, 'greece': { id: 'greece', name: 'Greece', x: 54, y: 34 },
+        'arabic': { id: 'arabic', name: 'Arabic', x: 58, y: 40 },
+        'american': { id: 'usa', name: 'USA', x: 22, y: 32 }, 'usa': { id: 'usa', name: 'USA', x: 22, y: 32 },
+        'canadian': { id: 'canada', name: 'Canada', x: 22, y: 25 }, 'canada': { id: 'canada', name: 'Canada', x: 22, y: 25 },
+        'mexican': { id: 'mexico', name: 'Mexico', x: 19, y: 43 }, 'mexico': { id: 'mexico', name: 'Mexico', x: 19, y: 43 },
+        'brazilian': { id: 'brazil', name: 'Brazil', x: 32, y: 62 }, 'brazil': { id: 'brazil', name: 'Brazil', x: 32, y: 62 },
+        'argentinian': { id: 'argentina', name: 'Argentina', x: 28, y: 75 }, 'argentina': { id: 'argentina', name: 'Argentina', x: 28, y: 75 },
+        'japanese': { id: 'japan', name: 'Japan', x: 86, y: 32 }, 'japan': { id: 'japan', name: 'Japan', x: 86, y: 32 },
+        'chinese': { id: 'china', name: 'China', x: 78, y: 35 }, 'china': { id: 'china', name: 'China', x: 78, y: 35 },
+        'korean': { id: 'korea', name: 'Korea', x: 83, y: 33 }, 'korea': { id: 'korea', name: 'Korea', x: 83, y: 33 },
+        'indian': { id: 'india', name: 'India', x: 70, y: 42 }, 'india': { id: 'india', name: 'India', x: 70, y: 42 },
+        'australian': { id: 'australia', name: 'Australia', x: 85, y: 75 }, 'australia': { id: 'australia', name: 'Australia', x: 85, y: 75 },
+        'celtic': { id: 'celtic', name: 'Celtic', x: 46.5, y: 26 },
+        'yiddish': { id: 'yiddish', name: 'Yiddish', x: 54, y: 27 },
+        'israel': { id: 'israel', name: 'Israel', x: 58, y: 36 }, 'jewish': { id: 'israel', name: 'Israel', x: 58, y: 36 },
+        'dutch': { id: 'netherlands', name: 'Netherlands', x: 49, y: 26 }, 'netherlands': { id: 'netherlands', name: 'Netherlands', x: 49, y: 26 },
+        'belgian': { id: 'belgium', name: 'Belgium', x: 49, y: 27 }, 'belgium': { id: 'belgium', name: 'Belgium', x: 49, y: 27 },
+        'swiss': { id: 'switzerland', name: 'Switzerland', x: 50, y: 29 }, 'switzerland': { id: 'switzerland', name: 'Switzerland', x: 50, y: 29 },
+        'austrian': { id: 'austria', name: 'Austria', x: 52, y: 29 }, 'austria': { id: 'austria', name: 'Austria', x: 52, y: 29 },
+        'czech': { id: 'czechia', name: 'Czechia', x: 53, y: 27 },
+        'hungarian': { id: 'hungary', name: 'Hungary', x: 54, y: 29 }, 'hungary': { id: 'hungary', name: 'Hungary', x: 54, y: 29 },
+        'romanian': { id: 'romania', name: 'Romania', x: 55, y: 30 }, 'romania': { id: 'romania', name: 'Romania', x: 55, y: 30 },
+        'bulgarian': { id: 'bulgaria', name: 'Bulgaria', x: 56, y: 32 }, 'bulgaria': { id: 'bulgaria', name: 'Bulgaria', x: 56, y: 32 },
+        'serbian': { id: 'serbia', name: 'Serbia', x: 54, y: 31 }, 'serbia': { id: 'serbia', name: 'Serbia', x: 54, y: 31 },
+        'croatian': { id: 'croatia', name: 'Croatia', x: 53, y: 31 }, 'croatia': { id: 'croatia', name: 'Croatia', x: 53, y: 31 },
+        'portuguese': { id: 'portugal', name: 'Portugal', x: 46, y: 33 }, 'portugal': { id: 'portugal', name: 'Portugal', x: 46, y: 33 }
     };
 
-    if (regionName) {
-        const key = regionName.toLowerCase();
-        
-        // Exact Match First
-        if (regionsMap[key]) {
-            return { 
-                x: Math.max(0, Math.min(100, regionsMap[key].x + offsetX)), 
-                y: Math.max(0, Math.min(100, regionsMap[key].y + offsetY)) 
-            };
-        }
-        
-        // Fuzzy Match Fallback (e.g., "French Canadian" matching "French")
-        for (const [rKey, rCoords] of Object.entries(regionsMap)) {
-            if (key.includes(rKey)) {
-                return { 
-                    x: Math.max(0, Math.min(100, rCoords.x + offsetX)), 
-                    y: Math.max(0, Math.min(100, rCoords.y + offsetY)) 
-                };
-            }
+    if (regionsMap[key]) {
+        return regionsMap[key];
+    }
+    
+    // Fuzzy Match Fallback
+    for (const [rKey, rCoords] of Object.entries(regionsMap)) {
+        if (key.includes(rKey)) {
+            return rCoords;
         }
     }
     
-    // FALLBACK: If no region found, distribute pseudo-randomly within bounding boxes
-    const fallbackRegions = [
-        [15, 30, 20, 35], // North America
-        [25, 35, 55, 75], // South America
-        [45, 55, 20, 35], // Europe
-        [48, 60, 45, 65], // Africa
-        [65, 85, 20, 45], // Asia
-        [75, 88, 70, 85]  // Oceania
-    ];
-    const regionIdx = Math.abs(hash) % fallbackRegions.length;
-    const region = fallbackRegions[regionIdx];
+    // Fallback for completely unknown regions based on a hash
+    let hash = 0;
+    for (let i = 0; i < key.length; i++) hash = key.charCodeAt(i) + ((hash << 5) - hash);
     
-    // Distribute pseudo-randomly within the selected region
-    const x = region[0] + (Math.abs(hash * 31) % (region[1] - region[0]));
-    const y = region[2] + (Math.abs(hash * 73) % (region[3] - region[2]));
-    
-    return { x, y };
+    return { 
+        id: key.replace(/[^a-z0-9]/g, ''), 
+        name: regionName,
+        x: 20 + (Math.abs(hash * 31) % 60), 
+        y: 20 + (Math.abs(hash * 73) % 60)
+    };
 };
 
 const WorldMap = ({ sheets, activeId, onSelect }) => {
-    const [hoveredSheet, setHoveredSheet] = useState(null);
+    const [activeRegion, setActiveRegion] = useState(null);
+    const [hoveredRegion, setHoveredRegion] = useState(null);
+
+    // Group individual sheets into Country/Region buckets
+    const regions = useMemo(() => {
+        const groups = {};
+        sheets.forEach(sheet => {
+            const rData = getRegionData(sheet.region);
+            if (!groups[rData.id]) {
+                groups[rData.id] = { ...rData, sheets: [] };
+            }
+            groups[rData.id].sheets.push(sheet);
+        });
+        return Object.values(groups);
+    }, [sheets]);
 
     return (
-        <div className="absolute inset-0 bg-[#060a13] flex items-center justify-center overflow-hidden z-0">
+        <div 
+            className="absolute inset-0 bg-[#060a13] flex items-center justify-center overflow-hidden z-0"
+            onClick={() => setActiveRegion(null)}
+        >
             {/* Dot-matrix style world map SVG background */}
             <div className="absolute inset-0 flex items-center justify-center opacity-40 pointer-events-none p-4 sm:p-10">
                 <svg viewBox="0 0 1008 650" className="w-full max-w-6xl h-auto" preserveAspectRatio="xMidYMid meet">
@@ -224,36 +220,75 @@ const WorldMap = ({ sheets, activeId, onSelect }) => {
             
             {/* Overlay Container perfectly aligning with SVG viewBox aspect ratio */}
             <div className="relative w-full max-w-6xl aspect-[1008/650] px-4 sm:px-10 pointer-events-none">
-                {sheets.map(sheet => {
-                    const coords = getMapCoordinates(sheet.id, sheet.region);
-                    const isActive = sheet.id === activeId;
+                {regions.map(region => {
+                    const isActive = activeRegion === region.id;
+                    const isHovered = hoveredRegion === region.id;
+                    
+                    // Highlight the region dot if the currently selected song belongs here
+                    const hasActiveSheet = region.sheets.some(s => s.id === activeId);
+
+                    // Ensure menus for countries near the bottom of the map open UPWARDS to avoid clipping
+                    const popupIsAbove = region.y > 55;
+
                     return (
                         <div 
-                            key={sheet.id}
-                            className={`absolute w-3 h-3 md:w-4 md:h-4 -ml-1.5 -mt-1.5 md:-ml-2 md:-mt-2 rounded-full cursor-pointer transition-all duration-300 pointer-events-auto ${isActive ? 'bg-blue-400 scale-[2] md:scale-150 z-20 shadow-[0_0_15px_rgba(59,130,246,0.8)]' : 'bg-gray-400/80 hover:bg-white hover:scale-150 z-10 shadow-sm'}`}
-                            style={{ left: `${coords.x}%`, top: `${coords.y}%` }}
-                            onClick={() => onSelect(sheet.id)}
-                            onMouseEnter={() => setHoveredSheet(sheet)}
-                            onMouseLeave={() => setHoveredSheet(null)}
-                        />
+                            key={region.id}
+                            className="absolute pointer-events-auto"
+                            style={{ left: `${region.x}%`, top: `${region.y}%` }}
+                            onClick={(e) => { e.stopPropagation(); setActiveRegion(isActive ? null : region.id); }}
+                            onMouseEnter={() => setHoveredRegion(region.id)}
+                            onMouseLeave={() => setHoveredRegion(null)}
+                        >
+                            {/* Region Country Dot */}
+                            <div 
+                                className={`absolute w-3 h-3 md:w-4 md:h-4 -ml-1.5 -mt-1.5 md:-ml-2 md:-mt-2 rounded-full cursor-pointer transition-all duration-300 shadow-md ${isActive ? 'bg-blue-400 scale-[1.5] md:scale-150 z-20 shadow-[0_0_15px_rgba(59,130,246,0.8)]' : hasActiveSheet ? 'bg-blue-500 scale-125' : 'bg-red-500 hover:bg-white hover:scale-150 z-10'}`}
+                            />
+
+                            {/* Hover Label (only shown if not actively clicked) */}
+                            {isHovered && !isActive && (
+                                <div className="absolute z-30 bg-gray-900/95 text-white text-xs font-bold px-2 py-1 rounded border border-gray-600 -translate-x-1/2 -translate-y-full mt-[-12px] whitespace-nowrap shadow-xl pointer-events-none">
+                                    {region.name} <span className="text-gray-400 font-normal">({region.sheets.length})</span>
+                                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-t-[5px] border-t-gray-600"></div>
+                                </div>
+                            )}
+                            
+                            {/* Active Click Popup Menu (List of Songs) */}
+                            {isActive && (
+                                <div 
+                                    className={`absolute z-40 bg-gray-900/95 backdrop-blur-md border border-gray-600 rounded-xl shadow-2xl p-3 w-56 sm:w-64 -translate-x-1/2 cursor-default ${popupIsAbove ? '-translate-y-full -mt-4' : 'mt-4'}`}
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    <div className="flex justify-between items-center mb-2 border-b border-gray-700 pb-2">
+                                        <h3 className="text-sm font-bold text-white truncate pr-2">{region.name}</h3>
+                                        <button onClick={() => setActiveRegion(null)} className="text-gray-400 hover:text-white shrink-0 bg-gray-800 rounded p-0.5 transition-colors">
+                                            <IconX className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                    <div className="max-h-48 overflow-y-auto hide-scrollbar flex flex-col space-y-1">
+                                        {region.sheets.map(sheet => (
+                                            <button 
+                                                key={sheet.id}
+                                                onClick={() => onSelect(sheet.id)}
+                                                className={`flex items-center space-x-3 text-left w-full px-2 py-1.5 rounded transition-colors group ${activeId === sheet.id ? 'bg-blue-600/40 text-blue-300' : 'hover:bg-gray-800 text-gray-300'}`}
+                                            >
+                                                <img src={sheet.url} alt="" className="w-8 h-10 object-cover rounded shadow-sm opacity-90 group-hover:opacity-100 shrink-0 bg-white" />
+                                                <span className="text-xs font-medium group-hover:text-white truncate flex-1">{sheet.name}</span>
+                                                {sheet.isFavorite && <IconHeart solid className="w-3.5 h-3.5 text-red-500 shrink-0" />}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    
+                                    {/* Smart pointer arrows for popup orientation */}
+                                    {popupIsAbove ? (
+                                        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-gray-600"></div>
+                                    ) : (
+                                        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-full w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[6px] border-b-gray-600"></div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
                     );
                 })}
-
-                {/* Animated Map Tooltip */}
-                {hoveredSheet && (
-                    <div 
-                        className="absolute z-30 flex flex-col items-center bg-gray-900/95 backdrop-blur-md border border-gray-600 p-2 rounded-xl shadow-2xl transition-opacity transform -translate-x-1/2 -translate-y-full pb-3 pointer-events-none"
-                        style={{ 
-                            left: `${getMapCoordinates(hoveredSheet.id, hoveredSheet.region).x}%`, 
-                            top: `${getMapCoordinates(hoveredSheet.id, hoveredSheet.region).y}%`,
-                            marginTop: '-12px'
-                        }}
-                    >
-                        <img src={hoveredSheet.url} alt="" className="w-24 h-32 object-cover rounded border border-gray-700 shadow-md mb-2 bg-white" />
-                        <span className="text-[10px] md:text-xs font-bold text-white whitespace-nowrap px-1 max-w-[120px] md:max-w-[150px] truncate">{hoveredSheet.name}</span>
-                        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-gray-600"></div>
-                    </div>
-                )}
             </div>
         </div>
     );
