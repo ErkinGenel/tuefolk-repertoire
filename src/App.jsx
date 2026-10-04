@@ -84,7 +84,7 @@ const storageAPI = (storage) => ({
 const local = storageAPI(window.localStorage);
 const session = storageAPI(window.sessionStorage);
 
-// --- WORLD MAP COMPONENT ---
+// --- WORLD MAP GEOGRAPHY DICTIONARY ---
 const GEO_DICT = {
     "Argentinien*": [-64.0, -34.6], "Argentinien": [-64.0, -34.6], "Argentina": [-64.0, -34.6],
     "Deutschland": [10.4, 51.1], "Deutschland (Schwaben)": [9.8, 48.3], "Germany": [10.4, 51.1],
@@ -125,27 +125,34 @@ const GEO_DICT = {
     "Kongo*": [23.0, -4.0], "Kongo": [23.0, -4.0], "Congo": [23.0, -4.0]
 };
 
-const Tooltip = ({ data, x, y, visible, activeId, onSelect, onClose }) => {
+// --- WORLD MAP TOOLTIP (SONG LIST) ---
+const Tooltip = ({ data, x, y, visible, onSelect, onClose }) => {
     if (!visible || !data) return null;
     return (
         <div 
-            className="fixed p-3 sm:p-4 text-xl sm:text-2xl text-gray-800 transform -rotate-1 z-[60] bg-[#fffac2] border border-[#d4cc7e] shadow-[2px_4px_15px_rgba(0,0,0,0.3)] flex flex-col"
+            className="fixed p-4 text-xl sm:text-2xl text-gray-900 transform -rotate-1 z-[60] bg-[#fffac2] border-2 border-[#d4cc7e] shadow-[4px_6px_25px_rgba(0,0,0,0.4)] flex flex-col pointer-events-auto"
             style={{ 
-                left: `${x}px`, top: `${y}px`, width: 'max-content', maxWidth: '280px', maxHeight: '320px', borderRadius: '2px 10px 3px 8px / 10px 2px 8px 3px'
+                left: `${x}px`, top: `${y}px`, width: 'max-content', maxWidth: '320px', maxHeight: '350px', borderRadius: '2px 10px 3px 8px / 10px 2px 8px 3px'
             }}
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()} // Prevent map from closing the tooltip when interacting with it
         >
-            <div className="font-bold border-b border-gray-400 mb-2 pb-1 text-[#d94a38] flex justify-between items-center shrink-0">
-                <span className="pr-4 truncate">{data.countriesTitle}</span>
-                <button onClick={onClose} className="text-gray-500 hover:text-black font-sans text-base transition-colors">✕</button>
+            <div className="font-bold border-b border-[#a6967f] mb-3 pb-1 text-[#d94a38] flex justify-between items-center shrink-0">
+                <span className="pr-4 truncate uppercase tracking-wider text-sm font-sans">{data.countriesTitle}</span>
+                <button onClick={onClose} className="text-gray-500 hover:text-black font-sans text-lg font-bold transition-colors w-6 h-6 flex items-center justify-center rounded-full hover:bg-black/10">✕</button>
             </div>
-            <ul className="list-none pl-1 pr-2 leading-tight m-0 overflow-y-auto hide-scrollbar space-y-1">
+            
+            {/* Clickable List of Songs for this Country */}
+            <ul className="list-none p-0 m-0 overflow-y-auto hide-scrollbar space-y-1.5 flex-1">
                 {data.songs.map(song => (
                     <li key={song.id}>
                         <button
-                            onClick={() => { onSelect(song.id); onClose(); }}
-                            className={`w-full text-left px-2 py-1.5 rounded transition-colors text-[18px] ${song.id === activeId ? 'bg-[#d94a38]/20 font-bold text-[#a72818]' : 'hover:bg-[#d94a38]/10'}`}
+                            onClick={() => {
+                                onSelect(song.id); // Triggers App to open viewer and load this song
+                                onClose();         // Close the tooltip
+                            }}
+                            className="w-full text-left px-3 py-2 rounded-md transition-all text-[18px] sm:text-[20px] leading-tight font-medium bg-[#d94a38]/5 hover:bg-[#d94a38]/20 hover:text-[#a72818] border border-transparent hover:border-[#d94a38]/30 hover:pl-4"
                         >
+                            <span className="text-[#8c7a61] opacity-50 mr-2 text-sm font-sans">🎵</span>
                             {song.name}
                         </button>
                     </li>
@@ -155,7 +162,8 @@ const Tooltip = ({ data, x, y, visible, activeId, onSelect, onClose }) => {
     );
 };
 
-function WorldMap({ sheets, activeId, onSelect }) {
+// --- WORLD MAP COMPONENT ---
+function WorldMap({ sheets, onSelect }) {
     const [worldData, setWorldData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [hoveredCountry, setHoveredCountry] = useState(null); 
@@ -168,6 +176,7 @@ function WorldMap({ sheets, activeId, onSelect }) {
     const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
     const [zoomState, setZoomState] = useState({ k: 1, x: 0, y: 0 });
 
+    // Group songs by geographical coordinate
     const markersData = useMemo(() => {
         const mapData = {};
         sheets.forEach(song => {
@@ -221,16 +230,20 @@ function WorldMap({ sheets, activeId, onSelect }) {
         zoomRef.current = zoom;
     }, [dimensions]); 
 
+    // Open Country Tooltip
     const handleMarkerClick = (event, markerData) => {
         event.stopPropagation();
+        
         let px = event.clientX + 15;
         let py = event.clientY + 15;
-        if (px + 280 > window.innerWidth) px = Math.max(10, event.clientX - 295);
-        if (py + 150 > window.innerHeight) py = Math.max(10, event.clientY - 165);
+        // Keep popup inside window bounds
+        if (px + 320 > window.innerWidth) px = Math.max(10, event.clientX - 330);
+        if (py + 350 > window.innerHeight) py = Math.max(10, event.clientY - 360);
 
         setTooltipData({ visible: true, x: px, y: py, data: markerData });
         if (markerData.countries.size > 0) setHoveredCountry(Array.from(markerData.countries)[0]);
 
+        // Zoom map smoothly to dot location
         const [x, y] = projection(markerData.coords);
         if (svgRef.current && zoomRef.current) {
             d3.select(svgRef.current).transition().duration(750).call(
@@ -274,7 +287,14 @@ function WorldMap({ sheets, activeId, onSelect }) {
                         const currentStrokeWidth = 1.5 / zoomState.k;
                         
                         return (
-                            <g key={`marker-${i}`} className="cursor-pointer" transform={`translate(${x}, ${y})`} onMouseEnter={() => setHoveredCountry(Array.from(marker.countries)[0])} onMouseLeave={() => setHoveredCountry(null)} onClick={(e) => handleMarkerClick(e, marker)}>
+                            <g 
+                                key={`marker-${i}`} 
+                                className="cursor-pointer pointer-events-auto" 
+                                transform={`translate(${x}, ${y})`} 
+                                onMouseEnter={() => setHoveredCountry(Array.from(marker.countries)[0])} 
+                                onMouseLeave={() => setHoveredCountry(null)} 
+                                onClick={(e) => handleMarkerClick(e, marker)}
+                            >
                                 <circle cx="0" cy="0" r={currentRadius} fill={isMarkerHovered ? "#a72818" : "#d94a38"} stroke="#3e332a" strokeWidth={currentStrokeWidth} style={{ transition: 'fill 0.2s ease, r 0.1s ease' }} />
                                 {zoomState.k > 3 && <text x="0" y="0" textAnchor="middle" dominantBaseline="central" fill="#fff" fontSize={currentRadius * 1.2} style={{ pointerEvents: 'none', fontFamily: 'sans-serif' }}>♪</text>}
                             </g>
@@ -282,7 +302,7 @@ function WorldMap({ sheets, activeId, onSelect }) {
                     })}
                 </g>
             </svg>
-            <Tooltip visible={tooltipData.visible} x={tooltipData.x} y={tooltipData.y} data={tooltipData.data} activeId={activeId} onSelect={onSelect} onClose={() => setTooltipData({ visible: false, x: 0, y: 0, data: null })} />
+            <Tooltip visible={tooltipData.visible} x={tooltipData.x} y={tooltipData.y} data={tooltipData.data} onSelect={onSelect} onClose={() => setTooltipData({ visible: false, x: 0, y: 0, data: null })} />
         </div>
     );
 }
@@ -338,18 +358,29 @@ const App = () => {
         }
     };
 
+    // Load Images & Extract Region Robustly
     useEffect(() => {
         if (!isAuthenticated) return;
         const savedFavs = (() => { try { return JSON.parse(local.get('folkFavorites', '[]')); } catch { return []; } })();
-        
-        // Vite auto-loading all images from folder
         const imageModules = import.meta.glob('./assets/images/*.{png,jpg,jpeg,gif,webp}', { eager: true, import: 'default' });
         
         const loadedSheets = Object.entries(imageModules).map(([path, url]) => {
             const filename = path.split('/').pop();
             const name = filename.replace(/\.[^/.]+$/, '');
+            
+            let region = null;
+            
+            // 1. Try to extract region directly from parentheses (e.g. "Song (Germany)")
             const match = name.match(/\(([^)]+)\)/);
-            const region = match ? match[1].trim() : null;
+            if (match) {
+                region = match[1].trim();
+            }
+            
+            // 2. If region wasn't found in parentheses (or doesn't match a country on our map), scan the full filename text
+            if (!region || (!GEO_DICT[region] && !GEO_DICT[region.replace('*', '')])) {
+                const foundKey = Object.keys(GEO_DICT).find(countryKey => name.toLowerCase().includes(countryKey.replace('*', '').toLowerCase()));
+                if (foundKey) region = foundKey;
+            }
 
             return { id: filename, name, url, region, isFavorite: savedFavs.includes(filename) };
         });
@@ -508,7 +539,13 @@ const App = () => {
                         {searchQuery ? <p className="text-sm mt-2 text-gray-600">Try clearing your search.</p> : sheets.length === 0 && <p className="text-sm mt-2 text-gray-600">Add images to src/assets/images, e.g. "Greensleeves (England).png".</p>}
                     </div>
                 ) : viewMode === 'map' ? (
-                    <WorldMap sheets={displayedSheets} activeId={activeId} onSelect={(id) => { setActiveId(id); setViewMode('viewer'); }} />
+                    <WorldMap 
+                        sheets={displayedSheets} 
+                        onSelect={(id) => { 
+                            setActiveId(id); 
+                            setViewMode('viewer'); 
+                        }} 
+                    />
                 ) : (
                     <>
                         <div className="absolute inset-y-0 left-0 w-1/6 md:w-32 z-10 flex items-center justify-start group cursor-pointer" onClick={goPrev}>
