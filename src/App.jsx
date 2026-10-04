@@ -114,14 +114,85 @@ class Metronome {
 
 const metronomeEngine = new Metronome();
 
-const getMapCoordinates = (id) => {
+const getMapCoordinates = (id, regionName) => {
     // Generate a deterministic hash based on the song's filename
     let hash = 0;
     for (let i = 0; i < id.length; i++) {
         hash = id.charCodeAt(i) + ((hash << 5) - hash);
     }
-    // Define rough bounding boxes for continents [xMin, xMax, yMin, yMax] as percentages
-    const regions = [
+    
+    // Deterministic offset (-2% to +2%) to prevent exact overlapping of pins in the same country
+    const offsetX = ((Math.abs(hash * 31) % 40) / 10) - 2;
+    const offsetY = ((Math.abs(hash * 73) % 40) / 10) - 2;
+
+    const regionsMap = {
+        'german': { x: 51, y: 27 }, 'germany': { x: 51, y: 27 },
+        'french': { x: 48.5, y: 29 }, 'france': { x: 48.5, y: 29 },
+        'english': { x: 47, y: 26 }, 'uk': { x: 47, y: 26 }, 'england': { x: 47, y: 26 },
+        'ireland': { x: 46, y: 26 }, 'irish': { x: 46, y: 26 },
+        'scottish': { x: 46.5, y: 25 }, 'scotland': { x: 46.5, y: 25 },
+        'spanish': { x: 47, y: 32 }, 'spain': { x: 47, y: 32 },
+        'italian': { x: 51, y: 32 }, 'italy': { x: 51, y: 32 },
+        'swedish': { x: 52, y: 20 }, 'sweden': { x: 52, y: 20 },
+        'norwegian': { x: 50.5, y: 20 }, 'norway': { x: 50.5, y: 20 },
+        'danish': { x: 51, y: 24 }, 'denmark': { x: 51, y: 24 },
+        'finnish': { x: 54, y: 19 }, 'finland': { x: 54, y: 19 },
+        'russian': { x: 65, y: 22 }, 'russia': { x: 65, y: 22 },
+        'polish': { x: 53, y: 26 }, 'poland': { x: 53, y: 26 },
+        'ukrainian': { x: 56, y: 27 }, 'ukraine': { x: 56, y: 27 },
+        'turkish': { x: 57, y: 33 }, 'turkey': { x: 57, y: 33 },
+        'greek': { x: 54, y: 34 }, 'greece': { x: 54, y: 34 },
+        'arabic': { x: 58, y: 40 },
+        'american': { x: 22, y: 32 }, 'usa': { x: 22, y: 32 },
+        'canadian': { x: 22, y: 25 }, 'canada': { x: 22, y: 25 },
+        'mexican': { x: 19, y: 43 }, 'mexico': { x: 19, y: 43 },
+        'brazilian': { x: 32, y: 62 }, 'brazil': { x: 32, y: 62 },
+        'argentinian': { x: 28, y: 75 }, 'argentina': { x: 28, y: 75 },
+        'japanese': { x: 86, y: 32 }, 'japan': { x: 86, y: 32 },
+        'chinese': { x: 78, y: 35 }, 'china': { x: 78, y: 35 },
+        'korean': { x: 83, y: 33 }, 'korea': { x: 83, y: 33 },
+        'indian': { x: 70, y: 42 }, 'india': { x: 70, y: 42 },
+        'australian': { x: 85, y: 75 }, 'australia': { x: 85, y: 75 },
+        'celtic': { x: 46.5, y: 26 },
+        'yiddish': { x: 54, y: 27 },
+        'israel': { x: 58, y: 36 }, 'jewish': { x: 58, y: 36 },
+        'dutch': { x: 49, y: 26 }, 'netherlands': { x: 49, y: 26 },
+        'belgian': { x: 49, y: 27 }, 'belgium': { x: 49, y: 27 },
+        'swiss': { x: 50, y: 29 }, 'switzerland': { x: 50, y: 29 },
+        'austrian': { x: 52, y: 29 }, 'austria': { x: 52, y: 29 },
+        'czech': { x: 53, y: 27 },
+        'hungarian': { x: 54, y: 29 }, 'hungary': { x: 54, y: 29 },
+        'romanian': { x: 55, y: 30 }, 'romania': { x: 55, y: 30 },
+        'bulgarian': { x: 56, y: 32 }, 'bulgaria': { x: 56, y: 32 },
+        'serbian': { x: 54, y: 31 }, 'serbia': { x: 54, y: 31 },
+        'croatian': { x: 53, y: 31 }, 'croatia': { x: 53, y: 31 },
+        'portuguese': { x: 46, y: 33 }, 'portugal': { x: 46, y: 33 }
+    };
+
+    if (regionName) {
+        const key = regionName.toLowerCase();
+        
+        // Exact Match First
+        if (regionsMap[key]) {
+            return { 
+                x: Math.max(0, Math.min(100, regionsMap[key].x + offsetX)), 
+                y: Math.max(0, Math.min(100, regionsMap[key].y + offsetY)) 
+            };
+        }
+        
+        // Fuzzy Match Fallback (e.g., "French Canadian" matching "French")
+        for (const [rKey, rCoords] of Object.entries(regionsMap)) {
+            if (key.includes(rKey)) {
+                return { 
+                    x: Math.max(0, Math.min(100, rCoords.x + offsetX)), 
+                    y: Math.max(0, Math.min(100, rCoords.y + offsetY)) 
+                };
+            }
+        }
+    }
+    
+    // FALLBACK: If no region found, distribute pseudo-randomly within bounding boxes
+    const fallbackRegions = [
         [15, 30, 20, 35], // North America
         [25, 35, 55, 75], // South America
         [45, 55, 20, 35], // Europe
@@ -129,8 +200,8 @@ const getMapCoordinates = (id) => {
         [65, 85, 20, 45], // Asia
         [75, 88, 70, 85]  // Oceania
     ];
-    const regionIdx = Math.abs(hash) % regions.length;
-    const region = regions[regionIdx];
+    const regionIdx = Math.abs(hash) % fallbackRegions.length;
+    const region = fallbackRegions[regionIdx];
     
     // Distribute pseudo-randomly within the selected region
     const x = region[0] + (Math.abs(hash * 31) % (region[1] - region[0]));
@@ -154,7 +225,7 @@ const WorldMap = ({ sheets, activeId, onSelect }) => {
             {/* Overlay Container perfectly aligning with SVG viewBox aspect ratio */}
             <div className="relative w-full max-w-6xl aspect-[1008/650] px-4 sm:px-10 pointer-events-none">
                 {sheets.map(sheet => {
-                    const coords = getMapCoordinates(sheet.id);
+                    const coords = getMapCoordinates(sheet.id, sheet.region);
                     const isActive = sheet.id === activeId;
                     return (
                         <div 
@@ -173,8 +244,8 @@ const WorldMap = ({ sheets, activeId, onSelect }) => {
                     <div 
                         className="absolute z-30 flex flex-col items-center bg-gray-900/95 backdrop-blur-md border border-gray-600 p-2 rounded-xl shadow-2xl transition-opacity transform -translate-x-1/2 -translate-y-full pb-3 pointer-events-none"
                         style={{ 
-                            left: `${getMapCoordinates(hoveredSheet.id).x}%`, 
-                            top: `${getMapCoordinates(hoveredSheet.id).y}%`,
+                            left: `${getMapCoordinates(hoveredSheet.id, hoveredSheet.region).x}%`, 
+                            top: `${getMapCoordinates(hoveredSheet.id, hoveredSheet.region).y}%`,
                             marginTop: '-12px'
                         }}
                     >
@@ -265,10 +336,16 @@ const App = () => {
         const loadedSheets = Object.entries(imageModules).map(([path, url]) => {
             const filename = path.split('/').pop();
             const name = filename.replace(/\.[^/.]+$/, "");
+            
+            // Extract region/country from parentheses, e.g. "Song Name (Germany)" -> "Germany"
+            const match = name.match(/\(([^)]+)\)/);
+            const region = match ? match[1].trim() : null;
+
             return {
                 id: filename,
                 name: name,
                 url: url,
+                region: region,
                 isFavorite: savedFavs.includes(filename)
             };
         });
