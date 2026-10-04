@@ -18,6 +18,12 @@ const IconChevronRight = ({ className }) => (
     </svg>
 );
 
+const IconMap = ({ className }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
+    </svg>
+);
+
 const IconMusic = ({ className }) => (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
         <path strokeLinecap="round" strokeLinejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path>
@@ -108,6 +114,80 @@ class Metronome {
 
 const metronomeEngine = new Metronome();
 
+const getMapCoordinates = (id) => {
+    // Generate a deterministic hash based on the song's filename
+    let hash = 0;
+    for (let i = 0; i < id.length; i++) {
+        hash = id.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    // Define rough bounding boxes for continents [xMin, xMax, yMin, yMax] as percentages
+    const regions = [
+        [15, 30, 20, 35], // North America
+        [25, 35, 55, 75], // South America
+        [45, 55, 20, 35], // Europe
+        [48, 60, 45, 65], // Africa
+        [65, 85, 20, 45], // Asia
+        [75, 88, 70, 85]  // Oceania
+    ];
+    const regionIdx = Math.abs(hash) % regions.length;
+    const region = regions[regionIdx];
+    
+    // Distribute pseudo-randomly within the selected region
+    const x = region[0] + (Math.abs(hash * 31) % (region[1] - region[0]));
+    const y = region[2] + (Math.abs(hash * 73) % (region[3] - region[2]));
+    
+    return { x, y };
+};
+
+const WorldMap = ({ sheets, activeId, onSelect }) => {
+    const [hoveredSheet, setHoveredSheet] = useState(null);
+
+    return (
+        <div className="absolute inset-0 bg-[#060a13] flex items-center justify-center overflow-hidden z-0">
+            {/* Dot-matrix style world map SVG background */}
+            <div className="absolute inset-0 flex items-center justify-center opacity-40 pointer-events-none p-4 sm:p-10">
+                <svg viewBox="0 0 1008 650" className="w-full max-w-6xl h-auto" preserveAspectRatio="xMidYMid meet">
+                    <path fill="#3b82f6" d="M305,129c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S307,129,305,129z M287,144c-3,0-5,2-5,5c0,3,2,5,5,5c3,0,5-2,5-5C292,146,290,144,287,144z M323,161c-3,0-5,2-5,5c0,3,2,5,5,5c3,0,5-2,5-5C328,163,326,161,323,161z M273,169c-2,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S276,169,273,169z M301,180c-3,0-5,2-5,5c0,3,2,5,5,5c2,0,5-2,5-5C306,183,304,180,301,180z M258,197c-3,0-5,2-5,5c0,3,2,5,5,5c3,0,5-2,5-5C263,199,261,197,258,197z M288,206c-3,0-5,2-5,5c0,3,2,5,5,5c2,0,5-2,5-5C293,208,291,206,288,206z M271,228c-3,0-5,2-5,5c0,3,2,5,5,5c2,0,5-2,5-5C276,231,274,228,271,228z M253,248c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S256,248,253,248z M277,265c-2,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S280,265,277,265z M316,259c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S318,259,316,259z M305,291c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S307,291,305,291z M342,284c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S345,284,342,284z M330,317c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S333,317,330,317z M367,314c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S369,314,367,314z M315,348c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S318,348,315,348z M353,353c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S355,353,353,353z M381,385c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S383,385,381,385z M341,399c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S344,399,341,399z M367,429c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S369,429,367,429z M350,466c-2,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S353,466,350,466z M475,138c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S478,138,475,138z M513,116c-3,0-5,2-5,5c0,3,2,5,5,5c2,0,5-2,5-5C518,118,515,116,513,116z M551,130c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S554,130,551,130z M502,159c-2,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S505,159,502,159z M484,188c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S487,188,484,188z M528,185c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S530,185,528,185z M565,165c-3,0-5,2-5,5c0,3,2,5,5,5c3,0,5-2,5-5C570,167,568,165,565,165z M606,149c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S609,149,606,149z M642,126c-3,0-5,2-5,5c0,3,2,5,5,5c3,0,5-2,5-5C647,128,645,126,642,126z M683,141c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S685,141,683,141z M651,166c-2,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S654,166,651,166z M609,186c-2,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S612,186,609,186z M574,204c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S576,204,574,204z M529,223c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S532,223,529,223z M491,234c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S493,234,491,234z M474,271c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S477,271,474,271z M511,265c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S514,265,511,265z M547,258c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S550,258,547,258z M586,242c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S588,242,586,242z M628,217c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S631,217,628,217z M671,199c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S674,199,671,199z M716,183c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S719,183,716,183z M764,177c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S767,177,764,177z M810,195c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S812,195,810,195z M771,215c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S774,215,771,215z M735,221c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S738,221,735,221z M695,237c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S698,237,695,237z M654,258c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S657,258,654,258z M617,285c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S619,285,617,285z M579,307c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S582,307,579,307z M542,301c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S544,301,542,301z M498,312c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S501,312,498,312z M509,350c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S512,350,509,350z M551,348c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S554,348,551,348z M593,348c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S596,348,593,348z M636,326c-2,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S639,326,636,326z M678,298c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S680,298,678,298z M720,277c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S723,277,720,277z M764,253c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S766,253,764,253z M815,247c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S818,247,815,247z M859,256c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S862,256,859,256z M824,289c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S827,289,824,289z M778,295c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S781,295,778,295z M740,323c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S742,323,740,323z M695,348c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S698,348,695,348z M654,374c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S657,374,654,374z M616,400c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S618,400,616,400z M579,426c-2,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S582,426,579,426z M536,448c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S539,448,536,448z M509,394c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S512,394,509,394z M542,385c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S544,385,542,385z M707,388c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S709,388,707,388z M751,364c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S753,364,751,364z M796,338c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S799,338,796,338z M843,307c-2,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S846,307,843,307z M896,326c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S898,326,896,326z M863,356c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S866,356,863,356z M820,380c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S823,380,820,380z M776,401c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S779,401,776,401z M738,429c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S741,429,738,429z M701,455c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S704,455,701,455z M793,440c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S796,440,793,440z M843,409c-3,0-5,2-5,5s2,5,5,5c2,0,5-2,5-5S846,409,843,409z M898,393c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S901,393,898,393z M865,429c-3,0-5,2-5,5s2,5,5,5c3,0,5-2,5-5S868,429,865,429z" />
+                </svg>
+            </div>
+            
+            {/* Overlay Container perfectly aligning with SVG viewBox aspect ratio */}
+            <div className="relative w-full max-w-6xl aspect-[1008/650] px-4 sm:px-10 pointer-events-none">
+                {sheets.map(sheet => {
+                    const coords = getMapCoordinates(sheet.id);
+                    const isActive = sheet.id === activeId;
+                    return (
+                        <div 
+                            key={sheet.id}
+                            className={`absolute w-3 h-3 md:w-4 md:h-4 -ml-1.5 -mt-1.5 md:-ml-2 md:-mt-2 rounded-full cursor-pointer transition-all duration-300 pointer-events-auto ${isActive ? 'bg-blue-400 scale-[2] md:scale-150 z-20 shadow-[0_0_15px_rgba(59,130,246,0.8)]' : 'bg-gray-400/80 hover:bg-white hover:scale-150 z-10 shadow-sm'}`}
+                            style={{ left: `${coords.x}%`, top: `${coords.y}%` }}
+                            onClick={() => onSelect(sheet.id)}
+                            onMouseEnter={() => setHoveredSheet(sheet)}
+                            onMouseLeave={() => setHoveredSheet(null)}
+                        />
+                    );
+                })}
+
+                {/* Animated Map Tooltip */}
+                {hoveredSheet && (
+                    <div 
+                        className="absolute z-30 flex flex-col items-center bg-gray-900/95 backdrop-blur-md border border-gray-600 p-2 rounded-xl shadow-2xl transition-opacity transform -translate-x-1/2 -translate-y-full pb-3 pointer-events-none"
+                        style={{ 
+                            left: `${getMapCoordinates(hoveredSheet.id).x}%`, 
+                            top: `${getMapCoordinates(hoveredSheet.id).y}%`,
+                            marginTop: '-12px'
+                        }}
+                    >
+                        <img src={hoveredSheet.url} alt="" className="w-24 h-32 object-cover rounded border border-gray-700 shadow-md mb-2 bg-white" />
+                        <span className="text-[10px] md:text-xs font-bold text-white whitespace-nowrap px-1 max-w-[120px] md:max-w-[150px] truncate">{hoveredSheet.name}</span>
+                        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-gray-600"></div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
 const App = () => {
     // Authentication State
     const CORRECT_PASSWORD = "folk"; 
@@ -125,6 +205,8 @@ const App = () => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+    
+    const [viewMode, setViewMode] = useState('viewer'); // 'viewer' or 'map'
     
     // Metronome State
     const [metroPlaying, setMetroPlaying] = useState(false);
@@ -399,6 +481,23 @@ const App = () => {
                         <IconHeart solid={showFavoritesOnly} className="w-5 h-5" />
                         <span className="text-sm font-medium hidden md:block">Favorites</span>
                     </button>
+
+                    <div className="flex items-center bg-gray-900/80 p-1 rounded-lg border border-gray-700 ml-1 sm:ml-4 shadow-inner">
+                        <button 
+                            onClick={() => setViewMode('viewer')}
+                            className={`p-1.5 rounded-md transition-all ${viewMode === 'viewer' ? 'bg-blue-600 text-white shadow' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+                            title="Sheet Viewer"
+                        >
+                            <IconMusic className="w-4 h-4" />
+                        </button>
+                        <button 
+                            onClick={() => setViewMode('map')}
+                            className={`p-1.5 rounded-md transition-all ${viewMode === 'map' ? 'bg-blue-600 text-white shadow' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+                            title="World Map Overview"
+                        >
+                            <IconMap className="w-4 h-4" />
+                        </button>
+                    </div>
                 </div>
 
                 {/* Metronome Controls */}
@@ -435,6 +534,15 @@ const App = () => {
                         <p>No sheets found in this view.</p>
                         {searchQuery && <p className="text-sm mt-2 text-gray-600">Try clearing your search.</p>}
                     </div>
+                ) : viewMode === 'map' ? (
+                    <WorldMap 
+                        sheets={displayedSheets}
+                        activeId={activeId}
+                        onSelect={(id) => {
+                            setActiveId(id);
+                            setViewMode('viewer');
+                        }}
+                    />
                 ) : (
                     <>
                         {/* Navigation Overlays */}
