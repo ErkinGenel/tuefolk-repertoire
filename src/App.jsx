@@ -32,6 +32,21 @@ const IconX = ({ className }) => (
 const IconSearch = ({ className }) => (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
 );
+const IconPlay = ({ className }) => (
+    <svg className={className} fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+);
+const IconPause = ({ className }) => (
+    <svg className={className} fill="currentColor" viewBox="0 0 24 24"><path d="M6 5h4v14H6zM14 5h4v14h-4z" /></svg>
+);
+const IconSkipPrev = ({ className }) => (
+    <svg className={className} fill="currentColor" viewBox="0 0 24 24"><path d="M6 6h2v12H6zM9.5 12l8.5 6V6z" /></svg>
+);
+const IconSkipNext = ({ className }) => (
+    <svg className={className} fill="currentColor" viewBox="0 0 24 24"><path d="M16 6h2v12h-2zM6 18l8.5-6L6 6z" /></svg>
+);
+const IconList = ({ className }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 10h16M4 14h10M4 18h10" /></svg>
+);
 
 // --- METRONOME ENGINE ---
 class Metronome {
@@ -83,6 +98,33 @@ const storageAPI = (storage) => ({
 });
 const local = storageAPI(window.localStorage);
 const session = storageAPI(window.sessionStorage);
+
+// --- SOUNDS (mp4 / wav under src/assets/sounds, subfolders allowed) ---
+const soundModules = import.meta.glob('./assets/sounds/**/*.{mp4,wav}', { eager: true, import: 'default' });
+
+const normalize = (s) =>
+    s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+const baseTitle = (name) => name.replace(/\([^)]*\)/g, '').replace(/\*/g, '').trim();
+const formatTime = (t) => {
+    if (!isFinite(t)) return '0:00';
+    const m = Math.floor(t / 60);
+    const s = Math.floor(t % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+};
+
+const ALL_SOUNDS = Object.entries(soundModules).map(([path, url]) => {
+    const parts = path.replace('./assets/sounds/', '').split('/');
+    const filename = parts.pop();
+    const label = filename.replace(/\.[^/.]+$/, '');
+    return {
+        id: path,
+        path,
+        url,
+        label,
+        ext: filename.split('.').pop().toLowerCase(),
+        keys: [...parts, label].map(normalize),
+    };
+});
 
 // --- WORLD MAP GEOGRAPHY DICTIONARY ---
 const GEO_DICT = {
@@ -302,6 +344,123 @@ function WorldMap({ sheets, onSelect }) {
     );
 }
 
+// --- PLAYLIST PLAYER ---
+function PlaylistPlayer({ tracks }) {
+    const audioRef = useRef(null);
+    const shouldPlayRef = useRef(false);
+    const [index, setIndex] = useState(0);
+    const [playing, setPlaying] = useState(false);
+    const [time, setTime] = useState(0);
+    const [duration, setDuration] = useState(0);
+    const [listOpen, setListOpen] = useState(false);
+
+    const track = tracks[index];
+
+    // (Re)load when the track changes; auto-play only if requested
+    useEffect(() => {
+        const a = audioRef.current;
+        if (!a) return;
+        a.load();
+        setTime(0);
+        if (shouldPlayRef.current) a.play().catch(() => setPlaying(false));
+    }, [track.url]);
+
+    // Stop when the song changes (component is keyed per song) or unmounts
+    useEffect(() => () => audioRef.current?.pause(), []);
+
+    const select = (i, autoplay = true) => {
+        shouldPlayRef.current = autoplay;
+        if (i === index) {
+            const a = audioRef.current;
+            a.currentTime = 0;
+            if (autoplay) a.play().catch(() => {});
+        } else {
+            setIndex(i);
+        }
+    };
+
+    const togglePlay = () => {
+        const a = audioRef.current;
+        if (!a) return;
+        if (a.paused) { shouldPlayRef.current = true; a.play().catch(() => setPlaying(false)); }
+        else { shouldPlayRef.current = false; a.pause(); }
+    };
+
+    const prev = () => {
+        const a = audioRef.current;
+        if (a && a.currentTime > 3) { a.currentTime = 0; return; }
+        select((index - 1 + tracks.length) % tracks.length, playing);
+    };
+    const next = () => select((index + 1) % tracks.length, playing);
+
+    const handleEnded = () => {
+        if (index < tracks.length - 1) select(index + 1, true);
+        else { shouldPlayRef.current = false; setPlaying(false); }
+    };
+
+    return (
+        <div className="shrink-0 bg-gray-900 border-t border-gray-800 z-20">
+            <audio
+                ref={audioRef}
+                src={track.url}
+                preload="metadata"
+                onPlay={() => setPlaying(true)}
+                onPause={() => setPlaying(false)}
+                onTimeUpdate={(e) => setTime(e.currentTarget.currentTime)}
+                onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
+                onEnded={handleEnded}
+            />
+
+            <div className="flex items-center gap-2 sm:gap-3 px-3 py-2">
+                <button onClick={prev} className="p-1.5 text-gray-300 hover:text-white rounded-lg hover:bg-gray-800"><IconSkipPrev className="w-5 h-5" /></button>
+                <button onClick={togglePlay} className="w-9 h-9 flex items-center justify-center rounded-full bg-blue-600 hover:bg-blue-500 text-white active:scale-95 transition-all">
+                    {playing ? <IconPause className="w-4 h-4" /> : <IconPlay className="w-4 h-4 ml-0.5" />}
+                </button>
+                <button onClick={next} className="p-1.5 text-gray-300 hover:text-white rounded-lg hover:bg-gray-800"><IconSkipNext className="w-5 h-5" /></button>
+
+                <div className="min-w-0 flex-1 flex flex-col">
+                    <span className="text-xs sm:text-sm text-gray-200 truncate">
+                        {track.label} <span className="text-gray-500 uppercase text-[10px] ml-1">{track.ext}</span>
+                    </span>
+                    <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-mono text-gray-500 w-9 text-right">{formatTime(time)}</span>
+                        <input
+                            type="range" min="0" max={duration || 0} step="0.1" value={time}
+                            onChange={(e) => { const v = parseFloat(e.target.value); audioRef.current.currentTime = v; setTime(v); }}
+                            className="flex-1 h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                        />
+                        <span className="text-[10px] font-mono text-gray-500 w-9">{formatTime(duration)}</span>
+                    </div>
+                </div>
+
+                <button
+                    onClick={() => setListOpen(o => !o)}
+                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs border transition-colors ${listOpen ? 'bg-blue-600/20 text-blue-400 border-blue-500/30' : 'bg-gray-800 text-gray-300 border-transparent hover:bg-gray-700'}`}
+                >
+                    <IconList className="w-4 h-4" />
+                    <span className="font-mono">{index + 1}/{tracks.length}</span>
+                </button>
+            </div>
+
+            {listOpen && (
+                <ul className="max-h-40 overflow-y-auto hide-scrollbar border-t border-gray-800 p-2 space-y-1 bg-gray-950/40">
+                    {tracks.map((t, i) => (
+                        <li key={t.id}>
+                            <button
+                                onClick={() => select(i, true)}
+                                className={`w-full text-left px-3 py-2 rounded-lg text-sm flex items-center justify-between transition-colors ${i === index ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30' : 'text-gray-300 hover:bg-gray-800 border border-transparent'}`}
+                            >
+                                <span className="truncate pr-2">{i + 1}. {t.label}</span>
+                                <span className="text-[10px] uppercase text-gray-500">{t.ext}</span>
+                            </button>
+                        </li>
+                    ))}
+                </ul>
+            )}
+        </div>
+    );
+}
+
 // --- MAIN APPLICATION ---
 const CORRECT_PASSWORD = 'folk';
 
@@ -336,6 +495,29 @@ const App = () => {
 
     const activeIndex = useMemo(() => displayedSheets.findIndex(s => s.id === activeId), [displayedSheets, activeId]);
     const activeSheet = displayedSheets[activeIndex];
+
+    // Assign each sound file to the best-matching song (longest name match wins)
+    const soundsBySong = useMemo(() => {
+        const result = {};
+        sheets.forEach(s => { result[s.id] = []; });
+        const keysFor = sheets.map(s => ({
+            id: s.id,
+            keys: [normalize(s.name), normalize(baseTitle(s.name))].filter(Boolean),
+        }));
+        ALL_SOUNDS.forEach(sound => {
+            let best = null, bestScore = 0;
+            keysFor.forEach(({ id, keys }) => {
+                keys.forEach(k => {
+                    if (k.length > bestScore && sound.keys.some(sk => sk.startsWith(k))) { best = id; bestScore = k.length; }
+                });
+            });
+            if (best) result[best].push(sound);
+        });
+        Object.values(result).forEach(list => list.sort((a, b) => a.path.localeCompare(b.path, undefined, { numeric: true })));
+        return result;
+    }, [sheets]);
+
+    const activeTracks = activeSheet ? soundsBySong[activeSheet.id] || [] : [];
 
     useEffect(() => {
         if (displayedSheets.length > 0 && activeIndex === -1 && isAuthenticated) setActiveId(displayedSheets[0].id);
@@ -488,7 +670,10 @@ const App = () => {
                         displayedSheets.map((sheet) => (
                             <button key={sheet.id} onClick={() => { setActiveId(sheet.id); if (window.innerWidth < 768) setIsMenuOpen(false); }} className={`w-full text-left px-3 py-2.5 rounded-lg flex items-center justify-between group transition-colors ${activeId === sheet.id ? 'bg-blue-600/20 text-blue-400 font-medium border border-blue-500/30' : 'text-gray-300 hover:bg-gray-800 hover:text-white border border-transparent'}`}>
                                 <span className="truncate pr-2 text-sm">{sheet.name}</span>
-                                {sheet.isFavorite && <IconHeart solid={true} className={`w-4 h-4 shrink-0 ${activeId === sheet.id ? 'text-blue-400' : 'text-red-500 opacity-60 group-hover:opacity-100'}`} />}
+                                <span className="flex items-center gap-1.5 shrink-0">
+                                    {soundsBySong[sheet.id]?.length > 0 && <IconMusic className="w-3.5 h-3.5 text-gray-500" />}
+                                    {sheet.isFavorite && <IconHeart solid={true} className={`w-4 h-4 ${activeId === sheet.id ? 'text-blue-400' : 'text-red-500 opacity-60 group-hover:opacity-100'}`} />}
+                                </span>
                             </button>
                         ))
                     )}
@@ -566,6 +751,11 @@ const App = () => {
                     </>
                 )}
             </div>
+
+            {/* PLAYLIST (only for songs with matching sound files) */}
+            {viewMode === 'viewer' && activeSheet && activeTracks.length > 0 && (
+                <PlaylistPlayer key={activeSheet.id} tracks={activeTracks} />
+            )}
 
             {/* BOTTOM THUMBNAILS - Safe area padding added for mobile */}
             <div className="h-24 sm:h-28 shrink-0 bg-gray-900 border-t border-gray-800 p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] overflow-x-auto hide-scrollbar flex items-center space-x-2 sm:space-x-3 shadow-[0_-10px_20px_rgba(0,0,0,0.3)] z-20">
