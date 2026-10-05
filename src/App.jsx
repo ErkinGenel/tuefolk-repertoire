@@ -621,7 +621,7 @@ const App = () => {
                     
                     <div className="mb-6 flex flex-col items-center">
                         <img 
-                            src="TüFolk Logo (1).jpg" 
+                            src="TüFolk Logo.png" 
                             alt="TüFolk Logo" 
                             className="w-32 h-32 object-contain rounded-full shadow-lg border border-gray-800 mb-4" 
                         />
