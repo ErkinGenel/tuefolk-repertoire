@@ -691,7 +691,7 @@ const App = () => {
                     <button onClick={() => setIsMenuOpen(true)} className="p-2 -ml-1 text-gray-300 hover:text-white hover:bg-gray-700 rounded-lg transition-colors active:scale-95"><IconMenu className="w-6 h-6" /></button>
                     
                     <div className="flex items-center gap-2">
-                        <img src="TüFolk Logo (1).jpg" alt="Logo" className="w-8 h-8 rounded-full object-cover hidden sm:block border border-gray-700" />
+                        <img src="TüFolk Logo.png" alt="Logo" className="w-8 h-8 rounded-full object-cover hidden sm:block border border-gray-700" />
                         <h1 className="font-bold text-lg hidden sm:block text-blue-400 truncate">TüFolk Repertoire</h1>
                     </div>
                     
