@@ -649,7 +649,7 @@ const App = () => {
             <div className={`fixed inset-y-0 left-0 w-80 max-w-[85vw] bg-gray-900 border-r border-gray-800 z-50 transform transition-transform duration-300 flex flex-col shadow-2xl ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
                 <div className="p-4 border-b border-gray-800 flex justify-between items-center bg-gray-900 shrink-0">
                     <h2 className="text-lg font-bold text-gray-100 flex items-center gap-2">
-                        <img src="TüFolk Logo (1).jpg" alt="Logo" className="w-6 h-6 object-cover rounded-full" />
+                        <img src="TüFolk Logo.png" alt="Logo" className="w-6 h-6 object-cover rounded-full" />
                         Song List ({sheets.length})
                     </h2>
                     <button onClick={() => setIsMenuOpen(false)} className="p-2 text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"><IconX className="w-5 h-5" /></button>
