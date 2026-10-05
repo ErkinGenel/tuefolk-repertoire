@@ -104,8 +104,6 @@ const soundModules = import.meta.glob('./assets/sounds/**/*.{mp4,wav,mp3,m4a,MP4
 
 const normalize = (s) =>
     s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
-// Song identity = title before "(country)" or " - description"
-// e.g. "Yüksek yüksek (Turkey) - infos_p1" -> "yuksekyuksek"
 const songKey = (name) => normalize(name.split(/\s+-\s+|\(/)[0]);
 const formatTime = (t) => {
     if (!isFinite(t)) return '0:00';
@@ -119,7 +117,6 @@ const ALL_SOUNDS = Object.entries(soundModules).map(([path, url]) => {
     const filename = parts.pop();
     const base = filename.replace(/\.[^/.]+$/, '');
     const dash = base.search(/\s+-\s+/);
-    // Display label: the part after " - " (e.g. "last arrangement"), else the whole name
     const label = (dash >= 0 ? base.slice(dash).replace(/^\s+-\s+/, '') : base).trim() || base.trim();
     return {
         id: path,
@@ -361,7 +358,6 @@ function PlaylistPlayer({ tracks }) {
 
     const track = tracks[index];
 
-    // (Re)load when the track changes; auto-play only if requested
     useEffect(() => {
         const a = audioRef.current;
         if (!a) return;
@@ -370,7 +366,6 @@ function PlaylistPlayer({ tracks }) {
         if (shouldPlayRef.current) a.play().catch(() => setPlaying(false));
     }, [track.url]);
 
-    // Stop when the song changes (component is keyed per song) or unmounts
     useEffect(() => () => audioRef.current?.pause(), []);
 
     const select = (i, autoplay = true) => {
@@ -501,7 +496,6 @@ const App = () => {
     const activeIndex = useMemo(() => displayedSheets.findIndex(s => s.id === activeId), [displayedSheets, activeId]);
     const activeSheet = displayedSheets[activeIndex];
 
-    // All pages of one song (same title before "(country)" / " - ") share the same playlist
     const soundsBySong = useMemo(() => {
         const byKey = {};
         const unmatched = [];
@@ -539,7 +533,6 @@ const App = () => {
         }
     };
 
-    // Load Images & Extract Region Robustly (Ensure 100% of songs load)
     useEffect(() => {
         if (!isAuthenticated) return;
         const savedFavs = (() => { try { return JSON.parse(local.get('folkFavorites', '[]')); } catch { return []; } })();
@@ -551,13 +544,11 @@ const App = () => {
             
             let region = null;
             
-            // 1. Try parentheses first
             const match = name.match(/\(([^)]+)\)/);
             if (match) {
                 region = match[1].trim();
             }
             
-            // 2. Scan entire filename text against dictionary keys
             if (!region || (!GEO_DICT[region] && !GEO_DICT[region.replace('*', '')])) {
                 const foundKey = Object.keys(GEO_DICT).find(countryKey => name.toLowerCase().includes(countryKey.replace('*', '').toLowerCase()));
                 if (foundKey) region = foundKey;
@@ -627,10 +618,16 @@ const App = () => {
         return (
             <div className="h-[100dvh] w-screen flex items-center justify-center bg-gray-950 text-gray-100 font-sans p-4">
                 <div className="max-w-md w-full bg-gray-900 border border-gray-800 rounded-2xl p-8 shadow-2xl flex flex-col items-center">
-                    <div className="w-16 h-16 bg-blue-600/20 text-blue-400 rounded-2xl flex items-center justify-center mb-6 border border-blue-500/30">
-                        <IconLock className="w-8 h-8" />
+                    
+                    <div className="mb-6 flex flex-col items-center">
+                        <img 
+                            src="TüFolk Logo (1).jpg" 
+                            alt="TüFolk Logo" 
+                            className="w-32 h-32 object-contain rounded-full shadow-lg border border-gray-800 mb-4" 
+                        />
+                        <h1 className="text-3xl font-bold tracking-tight text-white">TüFolk Repertoire</h1>
                     </div>
-                    <h1 className="text-2xl font-bold tracking-tight mb-2">FolkRepertoire</h1>
+
                     <p className="text-gray-400 text-sm text-center mb-6">Enter your password to access the sheet music collection.</p>
                     <form onSubmit={handleLogin} className="w-full space-y-4">
                         <div>
@@ -651,7 +648,10 @@ const App = () => {
             {/* SIDEBAR */}
             <div className={`fixed inset-y-0 left-0 w-80 max-w-[85vw] bg-gray-900 border-r border-gray-800 z-50 transform transition-transform duration-300 flex flex-col shadow-2xl ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
                 <div className="p-4 border-b border-gray-800 flex justify-between items-center bg-gray-900 shrink-0">
-                    <h2 className="text-lg font-bold text-gray-100 flex items-center gap-2"><IconMusic className="w-5 h-5 text-blue-500" /> Song List ({sheets.length})</h2>
+                    <h2 className="text-lg font-bold text-gray-100 flex items-center gap-2">
+                        <img src="TüFolk Logo (1).jpg" alt="Logo" className="w-6 h-6 object-cover rounded-full" />
+                        Song List ({sheets.length})
+                    </h2>
                     <button onClick={() => setIsMenuOpen(false)} className="p-2 text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"><IconX className="w-5 h-5" /></button>
                 </div>
 
@@ -689,7 +689,12 @@ const App = () => {
             <div className="h-16 shrink-0 bg-gray-800 border-b border-gray-700 flex items-center justify-between px-3 sm:px-4 z-20 shadow-md">
                 <div className="flex items-center space-x-3">
                     <button onClick={() => setIsMenuOpen(true)} className="p-2 -ml-1 text-gray-300 hover:text-white hover:bg-gray-700 rounded-lg transition-colors active:scale-95"><IconMenu className="w-6 h-6" /></button>
-                    <h1 className="font-bold text-lg hidden sm:block text-blue-400 truncate">Repertoire</h1>
+                    
+                    <div className="flex items-center gap-2">
+                        <img src="TüFolk Logo (1).jpg" alt="Logo" className="w-8 h-8 rounded-full object-cover hidden sm:block border border-gray-700" />
+                        <h1 className="font-bold text-lg hidden sm:block text-blue-400 truncate">TüFolk Repertoire</h1>
+                    </div>
+                    
                     <button onClick={() => setShowFavoritesOnly(!showFavoritesOnly)} className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg transition-colors border ${showFavoritesOnly ? 'bg-red-900/30 text-red-400 border-red-500/30' : 'bg-gray-700/50 hover:bg-gray-600 border-transparent text-gray-300'}`}>
                         <IconHeart solid={showFavoritesOnly} className="w-5 h-5" />
                         <span className="text-sm font-medium hidden md:block">Favorites</span>
