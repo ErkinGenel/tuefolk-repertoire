@@ -689,10 +689,10 @@ const App = () => {
                         <img 
                             src="TüFolk Logo.png" 
                             alt="TüFolk Logo" 
-                            className="w-32 h-32 object-contain rounded-full shadow-lg border border-gray-800 mb-4 bg-white" 
+                            className="w-48 h-48 object-cover p-1 rounded-full shadow-lg border border-gray-800 mb-4 bg-white" 
                         />
                         <h1 className="text-3xl font-bold tracking-tight text-white">TüFolk Repertoire</h1>
-                        <h3 className="text-3xl font-bold tracking-tight text-white">2023-2026</h3>
+                        <h5 className="text-3xl font-bold tracking-tight text-white">2023-2026</h5>
                     </div>
                     <p className="text-gray-400 text-sm text-center mb-6">Enter your password to access the sheet music collection.</p>
                     <form onSubmit={handleLogin} className="w-full space-y-4">
