@@ -691,7 +691,8 @@ const App = () => {
                             alt="TüFolk Logo" 
                             className="w-32 h-32 object-contain rounded-full shadow-lg border border-gray-800 mb-4 bg-white" 
                         />
-                        <h1 className="text-3xl font-bold tracking-tight text-white">TüFolk</h1>
+                        <h1 className="text-3xl font-bold tracking-tight text-white">TüFolk Repertoire</h1>
+                        <h3 className="text-3xl font-bold tracking-tight text-white">2023-2026</h3>
                     </div>
                     <p className="text-gray-400 text-sm text-center mb-6">Enter your password to access the sheet music collection.</p>
                     <form onSubmit={handleLogin} className="w-full space-y-4">
@@ -779,7 +780,7 @@ const App = () => {
                     <button onClick={() => setIsMenuOpen(true)} className="p-2 -ml-1 text-gray-300 hover:text-white hover:bg-gray-700 rounded-lg transition-colors active:scale-95"><IconMenu className="w-6 h-6" /></button>
                     <div className="flex items-center space-x-2">
                         <img src="TüFolk Logo.png" alt="Logo" className="w-8 h-8 object-cover rounded-full bg-white shadow" />
-                        <h1 className="font-bold text-base sm:text-lg text-blue-400 truncate">TüFolk Repertoire</h1>
+                        <h1 className="font-bold text-base sm:text-lg text-blue-400 truncate">TüFolk</h1>
                     </div>
 
                     <button onClick={handleInstallClick} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow transition-all border border-indigo-400/30">
