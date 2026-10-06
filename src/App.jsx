@@ -689,7 +689,7 @@ const App = () => {
                         <img 
                             src="TüFolk Logo.png" 
                             alt="TüFolk Logo" 
-                            className="w-48 h-48 object-cover p-1 shadow-lg border border-gray-800 mb-4 bg-white" 
+                            className="w-64 h-64 object-cover rounded-full p-5 shadow-lg border border-gray-800 mb-4 bg-white" 
                         />
                         <h1 className="text-3xl font-bold tracking-tight text-white">TüFolk Repertoire</h1>
                         <h5 className="text-3xl font-bold tracking-tight text-white">2023-2026</h5>
