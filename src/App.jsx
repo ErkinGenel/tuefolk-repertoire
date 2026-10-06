@@ -102,7 +102,7 @@ const storageAPI = (storage) => ({
 const local = storageAPI(window.localStorage);
 const session = storageAPI(window.sessionStorage);
 
-// --- SOUNDS (Lazy load via standard import.meta.glob) ---
+// --- SOUNDS ---
 const soundModules = import.meta.glob('./assets/sounds/**/*.{mp4,wav,mp3,m4a,MP4,WAV,MP3,M4A,Mp4,Wav,Mp3,M4a}', { eager: true, import: 'default' });
 
 const normalize = (s) =>
@@ -172,7 +172,7 @@ const GEO_DICT = {
     "Kongo*": [23.0, -4.0], "Kongo": [23.0, -4.0], "Congo": [23.0, -4.0]
 };
 
-// --- WORLD MAP TOOLTIP (SONG LIST) ---
+// --- WORLD MAP TOOLTIP ---
 const Tooltip = ({ data, x, y, visible, onSelect, onClose }) => {
     if (!visible || !data) return null;
     return (
@@ -491,20 +491,17 @@ const App = () => {
     const [bpm, setBpm] = useState(100);
 
     const [deferredPrompt, setDeferredPrompt] = useState(null);
-    const [showInstallModal, setShowInstallModal] = useState(false);
     const [isInstallable, setIsInstallable] = useState(false);
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+    const [showInstallModal, setShowInstallModal] = useState(false);
 
     const touchStartX = useRef(0);
     const touchEndX = useRef(0);
 
-    // Mouse drag scrolling refs for desktop thumbnails
     const thumbnailsRef = useRef(null);
     const isThumbDrag = useRef(false);
     const thumbStartX = useRef(0);
     const thumbScrollLeft = useRef(0);
-    const hasDragged = useRef(false); // Replaced useState with useRef to prevent lag
-    const [isGrabbed, setIsGrabbed] = useState(false);
+    const hasDragged = useRef(false);
 
     useEffect(() => {
         const handleBeforeInstallPrompt = (e) => {
@@ -512,7 +509,18 @@ const App = () => {
             setDeferredPrompt(e);
             setIsInstallable(true);
         };
+
+        if (window.pwaInstallPrompt) {
+            handleBeforeInstallPrompt(window.pwaInstallPrompt);
+        }
+
         window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+        window.addEventListener('appinstalled', () => {
+            setDeferredPrompt(null);
+            setIsInstallable(false);
+            window.pwaInstallPrompt = null;
+        });
+
         return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     }, []);
 
@@ -525,7 +533,6 @@ const App = () => {
                 setIsInstallable(false);
             }
         } else {
-            // Show manual instructions if device blocks automatic prompts (like Apple/iOS)
             setShowInstallModal(true);
         }
     };
@@ -640,26 +647,22 @@ const App = () => {
         touchEndX.current = 0;
     };
 
-    // Desktop mouse drag handlers for thumbnail bar
     const onThumbMouseDown = (e) => {
         isThumbDrag.current = true;
         hasDragged.current = false;
-        setIsGrabbed(true);
         thumbStartX.current = e.pageX - thumbnailsRef.current.offsetLeft;
         thumbScrollLeft.current = thumbnailsRef.current.scrollLeft;
     };
-    const onThumbMouseLeave = () => { isThumbDrag.current = false; setIsGrabbed(false); };
-    const onThumbMouseUp = () => { isThumbDrag.current = false; setIsGrabbed(false); };
+    const onThumbMouseLeave = () => { isThumbDrag.current = false; };
+    const onThumbMouseUp = () => { isThumbDrag.current = false; };
     const onThumbMouseMove = (e) => {
         if (!isThumbDrag.current) return;
         e.preventDefault();
         const x = e.pageX - thumbnailsRef.current.offsetLeft;
-        const walk = (x - thumbStartX.current) * 2; // multiply by 2 for faster scrolling
-        if (Math.abs(walk) > 10) hasDragged.current = true; // Don't count as a click if dragged
+        const walk = (x - thumbStartX.current) * 2;
+        if (Math.abs(walk) > 5) hasDragged.current = true;
         thumbnailsRef.current.scrollLeft = thumbScrollLeft.current - walk;
     };
-    
-    // Allow horizontal scrolling using a standard desktop mouse wheel
     const onThumbWheel = (e) => {
         if (thumbnailsRef.current) {
             thumbnailsRef.current.scrollLeft += e.deltaY;
@@ -686,7 +689,7 @@ const App = () => {
                         <img 
                             src="TüFolk Logo.png" 
                             alt="TüFolk Logo" 
-                            className="w-32 h-32 object-contain rounded-full shadow-lg border border-gray-800 mb-4" 
+                            className="w-32 h-32 object-contain rounded-full shadow-lg border border-gray-800 mb-4 bg-white" 
                         />
                         <h1 className="text-3xl font-bold tracking-tight text-white">TüFolk Repertoire</h1>
                     </div>
@@ -711,7 +714,7 @@ const App = () => {
             <div className={`fixed inset-y-0 left-0 w-80 max-w-[85vw] bg-gray-900 border-r border-gray-800 z-50 transform transition-transform duration-300 flex flex-col shadow-2xl ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
                 <div className="p-4 border-b border-gray-800 flex justify-between items-center bg-gray-900 shrink-0">
                     <h2 className="text-lg font-bold text-gray-100 flex items-center gap-2">
-                        <img src="TüFolk Logo.png" alt="Logo" className="w-6 h-6 object-cover rounded-full" />
+                        <img src="TüFolk Logo.png" alt="Logo" className="w-6 h-6 object-cover rounded-full bg-white" />
                         Song List ({sheets.length})
                     </h2>
                     <button onClick={() => setIsMenuOpen(false)} className="p-2 text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"><IconX className="w-5 h-5" /></button>
@@ -763,7 +766,7 @@ const App = () => {
                             <hr className="border-gray-700 my-2" />
                             
                             <p><strong>🤖 For Android / Desktop Chrome:</strong></p>
-                            <p>Click the install icon (usually a monitor or download arrow) located on the right side of your browser's address bar.</p>
+                            <p>Click the install icon located on the right side of your browser's address bar.</p>
                         </div>
                         <button onClick={() => setShowInstallModal(false)} className="mt-6 w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-medium transition-colors">Got it</button>
                     </div>
@@ -774,13 +777,14 @@ const App = () => {
             <div className="h-16 shrink-0 bg-gray-800 border-b border-gray-700 flex items-center justify-between px-3 sm:px-4 z-20 shadow-md">
                 <div className="flex items-center space-x-3">
                     <button onClick={() => setIsMenuOpen(true)} className="p-2 -ml-1 text-gray-300 hover:text-white hover:bg-gray-700 rounded-lg transition-colors active:scale-95"><IconMenu className="w-6 h-6" /></button>
-                    <h1 className="font-bold text-lg hidden sm:block text-blue-400 truncate">Repertoire</h1>
+                    <div className="flex items-center space-x-2">
+                        <img src="TüFolk Logo.png" alt="Logo" className="w-8 h-8 object-cover rounded-full bg-white shadow" />
+                        <h1 className="font-bold text-base sm:text-lg text-blue-400 truncate">TüFolk Repertoire</h1>
+                    </div>
 
-                    {!isStandalone && (
-                        <button onClick={handleInstallClick} className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow transition-all border border-indigo-400/30">
-                            <IconDownload className="w-4 h-4" /> <span className="hidden sm:inline">Install</span>
-                        </button>
-                    )}
+                    <button onClick={handleInstallClick} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow transition-all border border-indigo-400/30">
+                        <IconDownload className="w-4 h-4" /> <span className="hidden sm:inline">Install</span>
+                    </button>
 
                     <button onClick={() => setShowFavoritesOnly(!showFavoritesOnly)} className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg transition-colors border ${showFavoritesOnly ? 'bg-red-900/30 text-red-400 border-red-500/30' : 'bg-gray-700/50 hover:bg-gray-600 border-transparent text-gray-300'}`}>
                         <IconHeart solid={showFavoritesOnly} className="w-5 h-5" />
@@ -791,12 +795,6 @@ const App = () => {
                         <button onClick={() => setViewMode('viewer')} className={`p-1.5 rounded-md transition-all ${viewMode === 'viewer' ? 'bg-blue-600 text-white shadow' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`} title="Sheet Viewer"><IconMusic className="w-4 h-4" /></button>
                         <button onClick={() => setViewMode('map')} className={`p-1.5 rounded-md transition-all ${viewMode === 'map' ? 'bg-blue-600 text-white shadow' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`} title="World Map Overview"><IconMap className="w-4 h-4" /></button>
                     </div>
-
-                    {isInstallable && (
-                        <button onClick={handleInstallClick} className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-600 hover:bg-green-500 text-white text-xs font-semibold shadow transition-all">
-                            <IconDownload className="w-4 h-4" /> Install App
-                        </button>
-                    )}
                 </div>
 
                 <div className="flex items-center bg-gray-900/60 rounded-xl p-1 px-3 border border-gray-700 shadow-inner">
@@ -818,7 +816,7 @@ const App = () => {
                     <div className="text-gray-500 flex flex-col items-center">
                         <IconMusic className="w-16 h-16 mb-4 opacity-20" />
                         <p>No sheets found in this view.</p>
-                        {searchQuery ? <p className="text-sm mt-2 text-gray-600">Try clearing your search.</p> : sheets.length === 0 && <p className="text-sm mt-2 text-gray-600">Add images to src/assets/images, e.g. "Greensleeves (England).png".</p>}
+                        {searchQuery ? <p className="text-sm mt-2 text-gray-600">Try clearing your search.</p> : sheets.length === 0 && <p className="text-sm mt-2 text-gray-600">Add images to src/assets/images.</p>}
                     </div>
                 ) : viewMode === 'map' ? (
                     <WorldMap 
@@ -854,12 +852,12 @@ const App = () => {
                 )}
             </div>
 
-            {/* PLAYLIST (only for songs with matching sound files) */}
+            {/* PLAYLIST */}
             {viewMode === 'viewer' && activeSheet && activeTracks.length > 0 && (
                 <PlaylistPlayer key={activeSheet.groupKey} tracks={activeTracks} />
             )}
 
-            {/* BOTTOM THUMBNAILS - Safe area padding added for mobile */}
+            {/* BOTTOM THUMBNAILS */}
             {viewMode === 'viewer' && (
                 <div 
                     ref={thumbnailsRef}
@@ -868,8 +866,7 @@ const App = () => {
                     onMouseUp={onThumbMouseUp}
                     onMouseMove={onThumbMouseMove}
                     onWheel={onThumbWheel}
-                    className="h-24 sm:h-28 shrink-0 bg-gray-900 border-t border-gray-800 p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] overflow-x-auto hide-scrollbar flex items-center space-x-2 sm:space-x-3 shadow-[0_-10px_20px_rgba(0,0,0,0.3)] z-20 select-none"
-                    style={{ cursor: isGrabbed ? 'grabbing' : 'grab' }}
+                    className="h-24 sm:h-28 shrink-0 bg-gray-900 border-t border-gray-800 p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] overflow-x-auto hide-scrollbar flex items-center space-x-2 sm:space-x-3 shadow-[0_-10px_20px_rgba(0,0,0,0.3)] z-20 select-none cursor-grab active:cursor-grabbing"
                 >
                     {displayedSheets.map((sheet) => (
                         <div 

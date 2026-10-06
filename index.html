@@ -10,10 +10,18 @@
     <link rel="apple-touch-icon" href="/TüFolk Logo.png" />
     <meta name="theme-color" content="#111827" />
     <meta name="description" content="TüFolk Sheet Music Repertoire App">
+    
+    <!-- Catch install prompt early -->
+    <script>
+        window.pwaInstallPrompt = null;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            window.pwaInstallPrompt = e;
+        });
+    </script>
 </head>
 <body>
     <div id="root"></div>
-    <!-- This tells Vite to load your new modern React app -->
     <script type="module" src="/src/main.jsx"></script>
 </body>
 </html>
