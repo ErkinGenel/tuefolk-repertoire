@@ -691,7 +691,7 @@ const App = () => {
                             alt="TüFolk Logo" 
                             className="w-32 h-32 object-contain rounded-full shadow-lg border border-gray-800 mb-4 bg-white" 
                         />
-                        <h1 className="text-3xl font-bold tracking-tight text-white">TüFolk Repertoire</h1>
+                        <h1 className="text-3xl font-bold tracking-tight text-white">TüFolk</h1>
                     </div>
                     <p className="text-gray-400 text-sm text-center mb-6">Enter your password to access the sheet music collection.</p>
                     <form onSubmit={handleLogin} className="w-full space-y-4">
