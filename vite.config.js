@@ -3,7 +3,6 @@ import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
-  // IMPORTANT: If your app is hosted at a subpath, uncomment the line below.
   base: '/tuefolk-repertoire/',
   
   plugins: [
@@ -11,7 +10,6 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: 'auto',
-      includeAssets: ['**/*'],
       manifest: {
         name: 'TüFolk Repertoire',
         short_name: 'TüFolk',
@@ -30,10 +28,29 @@ export default defineConfig({
         ]
       },
       workbox: {
-        // Increased the maximum file size limit to ~100MB (100,000,000 bytes)
-        // This stops the build from crashing when processing the 64MB .wav files.
+        // FIX FOR SLOW LOADING:
+        // We tell the Service Worker NOT to background-download gigabytes of audio and images.
+        // It will only pre-download the fast, lightweight code files.
+        globPatterns: ['**/*.{js,css,html,ico,svg,json}'], 
         maximumFileSizeToCacheInBytes: 100000000, 
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg,jpeg,webp,mp3,wav,m4a,json}']
+        
+        // Audio and Images are now cached AT RUNTIME (only when the user opens them)
+        runtimeCaching: [
+          {
+            urlPattern: /\.(?:wav|mp3|m4a|mp4|png|jpg|jpeg|webp)$/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'media-runtime-cache',
+              expiration: {
+                maxEntries: 150,
+                maxAgeSeconds: 60 * 24 * 60 * 60 // Keeps offline songs for 60 days
+              },
+              cacheableResponse: {
+                statuses: [0, 200]
+              }
+            }
+          }
+        ]
       }
     })
   ],

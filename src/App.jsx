@@ -47,6 +47,9 @@ const IconSkipNext = ({ className }) => (
 const IconList = ({ className }) => (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 10h16M4 14h10M4 18h10" /></svg>
 );
+const IconDownload = ({ className }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+);
 
 // --- METRONOME ENGINE ---
 class Metronome {
@@ -99,7 +102,7 @@ const storageAPI = (storage) => ({
 const local = storageAPI(window.localStorage);
 const session = storageAPI(window.sessionStorage);
 
-// --- SOUNDS (mp4 / wav / mp3 / m4a under src/assets/sounds, subfolders allowed) ---
+// --- SOUNDS (Lazy load via standard import.meta.glob) ---
 const soundModules = import.meta.glob('./assets/sounds/**/*.{mp4,wav,mp3,m4a,MP4,WAV,MP3,M4A,Mp4,Wav,Mp3,M4a}', { eager: true, import: 'default' });
 
 const normalize = (s) =>
@@ -403,7 +406,7 @@ function PlaylistPlayer({ tracks }) {
             <audio
                 ref={audioRef}
                 src={track.url}
-                preload="metadata"
+                preload="none"
                 onPlay={() => setPlaying(true)}
                 onPause={() => setPlaying(false)}
                 onTimeUpdate={(e) => setTime(e.currentTarget.currentTime)}
@@ -480,8 +483,32 @@ const App = () => {
     const [metroPlaying, setMetroPlaying] = useState(false);
     const [bpm, setBpm] = useState(100);
 
+    const [deferredPrompt, setDeferredPrompt] = useState(null);
+    const [showInstallModal, setShowInstallModal] = useState(false);
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+
     const touchStartX = useRef(0);
     const touchEndX = useRef(0);
+
+    useEffect(() => {
+        const handleBeforeInstallPrompt = (e) => {
+            e.preventDefault();
+            setDeferredPrompt(e);
+            setIsInstallable(true);
+        };
+        window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+        return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    }, []);
+
+    const handleInstallClick = async () => {
+        if (!deferredPrompt) return;
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+            setDeferredPrompt(null);
+            setIsInstallable(false);
+        }
+    };
 
     const displayedSheets = useMemo(() => {
         let result = sheets;
@@ -498,18 +525,12 @@ const App = () => {
 
     const soundsBySong = useMemo(() => {
         const byKey = {};
-        const unmatched = [];
         const songKeys = new Set(sheets.map(s => s.groupKey));
         ALL_SOUNDS.forEach(sound => {
             const key = sound.keys.find(k => songKeys.has(k));
             if (key) (byKey[key] = byKey[key] || []).push(sound);
-            else unmatched.push(sound.path);
         });
         Object.values(byKey).forEach(list => list.sort((x, y) => x.path.localeCompare(y.path, undefined, { numeric: true })));
-        if (sheets.length > 0) {
-            console.info(`[Playlist] ${ALL_SOUNDS.length} sound file(s) found, ${ALL_SOUNDS.length - unmatched.length} matched.`);
-            if (unmatched.length) console.info('[Playlist] No matching song for:', unmatched);
-        }
         const result = {};
         sheets.forEach(s => { result[s.id] = byKey[s.groupKey] || []; });
         return result;
@@ -541,13 +562,10 @@ const App = () => {
         const loadedSheets = Object.entries(imageModules).map(([path, url]) => {
             const filename = path.split('/').pop();
             const name = filename.replace(/\.[^/.]+$/, '');
-            
             let region = null;
             
             const match = name.match(/\(([^)]+)\)/);
-            if (match) {
-                region = match[1].trim();
-            }
+            if (match) region = match[1].trim();
             
             if (!region || (!GEO_DICT[region] && !GEO_DICT[region.replace('*', '')])) {
                 const foundKey = Object.keys(GEO_DICT).find(countryKey => name.toLowerCase().includes(countryKey.replace('*', '').toLowerCase()));
@@ -614,20 +632,40 @@ const App = () => {
 
     useEffect(() => { return () => metronomeEngine.stop(); }, []);
 
+    useEffect(() => {
+        const handleBeforeInstallPrompt = (e) => {
+            e.preventDefault();
+            setDeferredPrompt(e);
+        };
+        window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+        return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    }, []);
+
+    const handleInstallClick = async () => {
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            if (outcome === 'accepted') {
+                setDeferredPrompt(null);
+            }
+        } else {
+            // Show manual instructions if device blocks automatic prompts (like Apple/iOS)
+            setShowInstallModal(true);
+        }
+    };
+
     if (!isAuthenticated) {
         return (
             <div className="h-[100dvh] w-screen flex items-center justify-center bg-gray-950 text-gray-100 font-sans p-4">
                 <div className="max-w-md w-full bg-gray-900 border border-gray-800 rounded-2xl p-8 shadow-2xl flex flex-col items-center">
-                    
                     <div className="mb-6 flex flex-col items-center">
                         <img 
-                            src="TüFolk Logo.png" 
+                            src="TüFolk Logo (1).jpg" 
                             alt="TüFolk Logo" 
                             className="w-32 h-32 object-contain rounded-full shadow-lg border border-gray-800 mb-4" 
                         />
                         <h1 className="text-3xl font-bold tracking-tight text-white">TüFolk Repertoire</h1>
                     </div>
-
                     <p className="text-gray-400 text-sm text-center mb-6">Enter your password to access the sheet music collection.</p>
                     <form onSubmit={handleLogin} className="w-full space-y-4">
                         <div>
@@ -649,7 +687,7 @@ const App = () => {
             <div className={`fixed inset-y-0 left-0 w-80 max-w-[85vw] bg-gray-900 border-r border-gray-800 z-50 transform transition-transform duration-300 flex flex-col shadow-2xl ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
                 <div className="p-4 border-b border-gray-800 flex justify-between items-center bg-gray-900 shrink-0">
                     <h2 className="text-lg font-bold text-gray-100 flex items-center gap-2">
-                        <img src="TüFolk Logo.png" alt="Logo" className="w-6 h-6 object-cover rounded-full" />
+                        <img src="TüFolk Logo (1).jpg" alt="Logo" className="w-6 h-6 object-cover rounded-full" />
                         Song List ({sheets.length})
                     </h2>
                     <button onClick={() => setIsMenuOpen(false)} className="p-2 text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"><IconX className="w-5 h-5" /></button>
@@ -685,16 +723,41 @@ const App = () => {
                 <div className="p-3 border-t border-gray-800 text-xs font-mono text-gray-500 text-center bg-gray-900 shrink-0">{displayedSheets.length} {displayedSheets.length === 1 ? 'RESULT' : 'RESULTS'}</div>
             </div>
 
+            {showInstallModal && (
+                <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setShowInstallModal(false)}>
+                    <div className="bg-gray-900 border border-gray-700 p-6 rounded-2xl max-w-sm w-full shadow-2xl relative" onClick={e => e.stopPropagation()}>
+                        <button onClick={() => setShowInstallModal(false)} className="absolute top-4 right-4 text-gray-400 hover:text-white"><IconX className="w-5 h-5" /></button>
+                        <h3 className="text-xl font-bold text-white mb-4">Install TüFolk App</h3>
+                        
+                        <div className="space-y-4 text-sm text-gray-300">
+                            <p><strong>🍏 For iPhone/iPad (Safari):</strong></p>
+                            <ol className="list-decimal pl-5 space-y-1">
+                                <li>Tap the <strong>Share</strong> button at the bottom of the screen.</li>
+                                <li>Scroll down and tap <strong>Add to Home Screen</strong>.</li>
+                            </ol>
+                            
+                            <hr className="border-gray-700 my-2" />
+                            
+                            <p><strong>🤖 For Android / Desktop Chrome:</strong></p>
+                            <p>Click the install icon (usually a monitor or download arrow) located on the right side of your browser's address bar.</p>
+                        </div>
+                        <button onClick={() => setShowInstallModal(false)} className="mt-6 w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-medium transition-colors">Got it</button>
+                    </div>
+                </div>
+            )}
+
             {/* TOP HEADER */}
             <div className="h-16 shrink-0 bg-gray-800 border-b border-gray-700 flex items-center justify-between px-3 sm:px-4 z-20 shadow-md">
                 <div className="flex items-center space-x-3">
                     <button onClick={() => setIsMenuOpen(true)} className="p-2 -ml-1 text-gray-300 hover:text-white hover:bg-gray-700 rounded-lg transition-colors active:scale-95"><IconMenu className="w-6 h-6" /></button>
-                    
-                    <div className="flex items-center gap-2">
-                        <img src="TüFolk Logo.png" alt="Logo" className="w-8 h-8 rounded-full object-cover hidden sm:block border border-gray-700" />
-                        <h1 className="font-bold text-lg hidden sm:block text-blue-400 truncate">TüFolk Repertoire</h1>
-                    </div>
-                    
+                    <h1 className="font-bold text-lg hidden sm:block text-blue-400 truncate">Repertoire</h1>
+
+                    {!isStandalone && (
+                        <button onClick={handleInstallClick} className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow transition-all border border-indigo-400/30">
+                            <IconDownload className="w-4 h-4" /> <span className="hidden sm:inline">Install</span>
+                        </button>
+                    )}
+
                     <button onClick={() => setShowFavoritesOnly(!showFavoritesOnly)} className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg transition-colors border ${showFavoritesOnly ? 'bg-red-900/30 text-red-400 border-red-500/30' : 'bg-gray-700/50 hover:bg-gray-600 border-transparent text-gray-300'}`}>
                         <IconHeart solid={showFavoritesOnly} className="w-5 h-5" />
                         <span className="text-sm font-medium hidden md:block">Favorites</span>
@@ -704,6 +767,12 @@ const App = () => {
                         <button onClick={() => setViewMode('viewer')} className={`p-1.5 rounded-md transition-all ${viewMode === 'viewer' ? 'bg-blue-600 text-white shadow' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`} title="Sheet Viewer"><IconMusic className="w-4 h-4" /></button>
                         <button onClick={() => setViewMode('map')} className={`p-1.5 rounded-md transition-all ${viewMode === 'map' ? 'bg-blue-600 text-white shadow' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`} title="World Map Overview"><IconMap className="w-4 h-4" /></button>
                     </div>
+
+                    {isInstallable && (
+                        <button onClick={handleInstallClick} className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-600 hover:bg-green-500 text-white text-xs font-semibold shadow transition-all">
+                            <IconDownload className="w-4 h-4" /> Install App
+                        </button>
+                    )}
                 </div>
 
                 <div className="flex items-center bg-gray-900/60 rounded-xl p-1 px-3 border border-gray-700 shadow-inner">
