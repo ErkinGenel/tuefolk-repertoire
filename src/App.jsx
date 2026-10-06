@@ -358,12 +358,14 @@ function PlaylistPlayer({ tracks }) {
     const [time, setTime] = useState(0);
     const [duration, setDuration] = useState(0);
     const [listOpen, setListOpen] = useState(false);
+    const [isBuffering, setIsBuffering] = useState(true);
 
     const track = tracks[index];
 
     useEffect(() => {
         const a = audioRef.current;
         if (!a) return;
+        setIsBuffering(true);
         a.load();
         setTime(0);
         if (shouldPlayRef.current) a.play().catch(() => setPlaying(false));
@@ -407,7 +409,10 @@ function PlaylistPlayer({ tracks }) {
                 ref={audioRef}
                 src={track.url}
                 preload="none"
-                onPlay={() => setPlaying(true)}
+                onLoadStart={() => setIsBuffering(true)}
+                onWaiting={() => setIsBuffering(true)}
+                onCanPlay={() => setIsBuffering(false)}
+                onPlaying={() => { setPlaying(true); setIsBuffering(false); }}
                 onPause={() => setPlaying(false)}
                 onTimeUpdate={(e) => setTime(e.currentTarget.currentTime)}
                 onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
@@ -417,7 +422,9 @@ function PlaylistPlayer({ tracks }) {
             <div className="flex items-center gap-2 sm:gap-3 px-3 py-2">
                 <button onClick={prev} className="p-1.5 text-gray-300 hover:text-white rounded-lg hover:bg-gray-800"><IconSkipPrev className="w-5 h-5" /></button>
                 <button onClick={togglePlay} className="w-9 h-9 flex items-center justify-center rounded-full bg-blue-600 hover:bg-blue-500 text-white active:scale-95 transition-all">
-                    {playing ? <IconPause className="w-4 h-4" /> : <IconPlay className="w-4 h-4 ml-0.5" />}
+                    {isBuffering ? (
+                        <svg className="w-4 h-4 animate-spin text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    ) : playing ? <IconPause className="w-4 h-4" /> : <IconPlay className="w-4 h-4 ml-0.5" />}
                 </button>
                 <button onClick={next} className="p-1.5 text-gray-300 hover:text-white rounded-lg hover:bg-gray-800"><IconSkipNext className="w-5 h-5" /></button>
 
@@ -853,32 +860,34 @@ const App = () => {
             )}
 
             {/* BOTTOM THUMBNAILS - Safe area padding added for mobile */}
-            <div 
-                ref={thumbnailsRef}
-                onMouseDown={onThumbMouseDown}
-                onMouseLeave={onThumbMouseLeave}
-                onMouseUp={onThumbMouseUp}
-                onMouseMove={onThumbMouseMove}
-                onWheel={onThumbWheel}
-                className="h-24 sm:h-28 shrink-0 bg-gray-900 border-t border-gray-800 p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] overflow-x-auto hide-scrollbar flex items-center space-x-2 sm:space-x-3 shadow-[0_-10px_20px_rgba(0,0,0,0.3)] z-20 select-none"
-                style={{ cursor: isGrabbed ? 'grabbing' : 'grab' }}
-            >
-                {displayedSheets.map((sheet) => (
-                    <div 
-                        key={sheet.id} 
-                        onClick={() => { if (!hasDragged.current) setActiveId(sheet.id); }} 
-                        className={`relative h-full shrink-0 w-16 sm:w-20 rounded-lg transition-all duration-200 overflow-hidden ${sheet.id === activeId ? 'ring-2 ring-blue-500 scale-95 opacity-100' : 'opacity-50 hover:opacity-100'}`}
-                    >
-                        <img src={sheet.url} alt={sheet.name} className="w-full h-full object-cover" draggable="false" />
-                        <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/95 to-transparent p-1 pt-6 pointer-events-none">
-                            <p className="text-[9px] font-medium truncate text-center text-gray-300">{sheet.name}</p>
+            {viewMode === 'viewer' && (
+                <div 
+                    ref={thumbnailsRef}
+                    onMouseDown={onThumbMouseDown}
+                    onMouseLeave={onThumbMouseLeave}
+                    onMouseUp={onThumbMouseUp}
+                    onMouseMove={onThumbMouseMove}
+                    onWheel={onThumbWheel}
+                    className="h-24 sm:h-28 shrink-0 bg-gray-900 border-t border-gray-800 p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] overflow-x-auto hide-scrollbar flex items-center space-x-2 sm:space-x-3 shadow-[0_-10px_20px_rgba(0,0,0,0.3)] z-20 select-none"
+                    style={{ cursor: isGrabbed ? 'grabbing' : 'grab' }}
+                >
+                    {displayedSheets.map((sheet) => (
+                        <div 
+                            key={sheet.id} 
+                            onClick={() => { if (!hasDragged.current) setActiveId(sheet.id); }} 
+                            className={`relative h-full shrink-0 w-16 sm:w-20 rounded-lg transition-all duration-200 overflow-hidden ${sheet.id === activeId ? 'ring-2 ring-blue-500 scale-95 opacity-100' : 'opacity-50 hover:opacity-100'}`}
+                        >
+                            <img src={sheet.url} alt={sheet.name} className="w-full h-full object-cover" draggable="false" />
+                            <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/95 to-transparent p-1 pt-6 pointer-events-none">
+                                <p className="text-[9px] font-medium truncate text-center text-gray-300">{sheet.name}</p>
+                            </div>
+                            {sheet.isFavorite && (
+                                <div className="absolute top-1 right-1 text-red-500 pointer-events-none"><IconHeart solid={true} className="w-3 h-3 drop-shadow-md" /></div>
+                            )}
                         </div>
-                        {sheet.isFavorite && (
-                            <div className="absolute top-1 right-1 text-red-500 pointer-events-none"><IconHeart solid={true} className="w-3 h-3 drop-shadow-md" /></div>
-                        )}
-                    </div>
-                ))}
-            </div>
+                    ))}
+                </div>
+            )}
         </div>
     );
 };
