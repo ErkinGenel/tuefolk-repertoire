@@ -4,7 +4,7 @@ import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
   // IMPORTANT: If your app is hosted at a subpath, uncomment the line below.
-  // base: '/tuefolk-repertoire/',
+  base: '/tuefolk-repertoire/',
   
   plugins: [
     react(),
