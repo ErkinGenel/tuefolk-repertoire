@@ -485,6 +485,7 @@ const App = () => {
 
     const [deferredPrompt, setDeferredPrompt] = useState(null);
     const [showInstallModal, setShowInstallModal] = useState(false);
+    const [isInstallable, setIsInstallable] = useState(false);
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
 
     const touchStartX = useRef(0);
@@ -501,12 +502,16 @@ const App = () => {
     }, []);
 
     const handleInstallClick = async () => {
-        if (!deferredPrompt) return;
-        deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
-        if (outcome === 'accepted') {
-            setDeferredPrompt(null);
-            setIsInstallable(false);
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            if (outcome === 'accepted') {
+                setDeferredPrompt(null);
+                setIsInstallable(false);
+            }
+        } else {
+            // Show manual instructions if device blocks automatic prompts (like Apple/iOS)
+            setShowInstallModal(true);
         }
     };
 
@@ -631,28 +636,6 @@ const App = () => {
     };
 
     useEffect(() => { return () => metronomeEngine.stop(); }, []);
-
-    useEffect(() => {
-        const handleBeforeInstallPrompt = (e) => {
-            e.preventDefault();
-            setDeferredPrompt(e);
-        };
-        window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-        return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    }, []);
-
-    const handleInstallClick = async () => {
-        if (deferredPrompt) {
-            deferredPrompt.prompt();
-            const { outcome } = await deferredPrompt.userChoice;
-            if (outcome === 'accepted') {
-                setDeferredPrompt(null);
-            }
-        } else {
-            // Show manual instructions if device blocks automatic prompts (like Apple/iOS)
-            setShowInstallModal(true);
-        }
-    };
 
     if (!isAuthenticated) {
         return (
