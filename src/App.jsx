@@ -491,6 +491,14 @@ const App = () => {
     const touchStartX = useRef(0);
     const touchEndX = useRef(0);
 
+    // Mouse drag scrolling refs for desktop thumbnails
+    const thumbnailsRef = useRef(null);
+    const isThumbDrag = useRef(false);
+    const thumbStartX = useRef(0);
+    const thumbScrollLeft = useRef(0);
+    const [isThumbDragging, setIsThumbDragging] = useState(false);
+    const [isGrabbed, setIsGrabbed] = useState(false);
+
     useEffect(() => {
         const handleBeforeInstallPrompt = (e) => {
             e.preventDefault();
@@ -625,6 +633,25 @@ const App = () => {
         touchEndX.current = 0;
     };
 
+    // Desktop mouse drag handlers for thumbnail bar
+    const onThumbMouseDown = (e) => {
+        isThumbDrag.current = true;
+        setIsThumbDragging(false);
+        setIsGrabbed(true);
+        thumbStartX.current = e.pageX - thumbnailsRef.current.offsetLeft;
+        thumbScrollLeft.current = thumbnailsRef.current.scrollLeft;
+    };
+    const onThumbMouseLeave = () => { isThumbDrag.current = false; setIsGrabbed(false); };
+    const onThumbMouseUp = () => { isThumbDrag.current = false; setIsGrabbed(false); };
+    const onThumbMouseMove = (e) => {
+        if (!isThumbDrag.current) return;
+        e.preventDefault();
+        const x = e.pageX - thumbnailsRef.current.offsetLeft;
+        const walk = (x - thumbStartX.current) * 2; // multiply by 2 for faster scrolling
+        if (Math.abs(walk) > 10) setIsThumbDragging(true); // Don't count as a click if dragged
+        thumbnailsRef.current.scrollLeft = thumbScrollLeft.current - walk;
+    };
+
     const toggleMetronome = () => {
         if (metroPlaying) { metronomeEngine.stop(); setMetroPlaying(false); }
         else { metronomeEngine.start(); setMetroPlaying(true); }
@@ -643,7 +670,7 @@ const App = () => {
                 <div className="max-w-md w-full bg-gray-900 border border-gray-800 rounded-2xl p-8 shadow-2xl flex flex-col items-center">
                     <div className="mb-6 flex flex-col items-center">
                         <img 
-                            src="TüFolk Logo (1).jpg" 
+                            src="TüFolk Logo.png" 
                             alt="TüFolk Logo" 
                             className="w-32 h-32 object-contain rounded-full shadow-lg border border-gray-800 mb-4" 
                         />
@@ -670,7 +697,7 @@ const App = () => {
             <div className={`fixed inset-y-0 left-0 w-80 max-w-[85vw] bg-gray-900 border-r border-gray-800 z-50 transform transition-transform duration-300 flex flex-col shadow-2xl ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
                 <div className="p-4 border-b border-gray-800 flex justify-between items-center bg-gray-900 shrink-0">
                     <h2 className="text-lg font-bold text-gray-100 flex items-center gap-2">
-                        <img src="TüFolk Logo (1).jpg" alt="Logo" className="w-6 h-6 object-cover rounded-full" />
+                        <img src="TüFolk Logo.png" alt="Logo" className="w-6 h-6 object-cover rounded-full" />
                         Song List ({sheets.length})
                     </h2>
                     <button onClick={() => setIsMenuOpen(false)} className="p-2 text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"><IconX className="w-5 h-5" /></button>
@@ -819,15 +846,27 @@ const App = () => {
             )}
 
             {/* BOTTOM THUMBNAILS - Safe area padding added for mobile */}
-            <div className="h-24 sm:h-28 shrink-0 bg-gray-900 border-t border-gray-800 p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] overflow-x-auto hide-scrollbar flex items-center space-x-2 sm:space-x-3 shadow-[0_-10px_20px_rgba(0,0,0,0.3)] z-20">
+            <div 
+                ref={thumbnailsRef}
+                onMouseDown={onThumbMouseDown}
+                onMouseLeave={onThumbMouseLeave}
+                onMouseUp={onThumbMouseUp}
+                onMouseMove={onThumbMouseMove}
+                className="h-24 sm:h-28 shrink-0 bg-gray-900 border-t border-gray-800 p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] overflow-x-auto hide-scrollbar flex items-center space-x-2 sm:space-x-3 shadow-[0_-10px_20px_rgba(0,0,0,0.3)] z-20"
+                style={{ cursor: isGrabbed ? 'grabbing' : 'grab' }}
+            >
                 {displayedSheets.map((sheet) => (
-                    <div key={sheet.id} onClick={() => setActiveId(sheet.id)} className={`relative h-full shrink-0 w-16 sm:w-20 rounded-lg cursor-pointer transition-all duration-200 overflow-hidden ${sheet.id === activeId ? 'ring-2 ring-blue-500 scale-95 opacity-100' : 'opacity-50 hover:opacity-100'}`}>
-                        <img src={sheet.url} alt={sheet.name} className="w-full h-full object-cover" />
-                        <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/95 to-transparent p-1 pt-6">
+                    <div 
+                        key={sheet.id} 
+                        onClick={() => { if (!isThumbDragging) setActiveId(sheet.id); }} 
+                        className={`relative h-full shrink-0 w-16 sm:w-20 rounded-lg transition-all duration-200 overflow-hidden ${sheet.id === activeId ? 'ring-2 ring-blue-500 scale-95 opacity-100' : 'opacity-50 hover:opacity-100'}`}
+                    >
+                        <img src={sheet.url} alt={sheet.name} className="w-full h-full object-cover" draggable="false" />
+                        <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/95 to-transparent p-1 pt-6 pointer-events-none">
                             <p className="text-[9px] font-medium truncate text-center text-gray-300">{sheet.name}</p>
                         </div>
                         {sheet.isFavorite && (
-                            <div className="absolute top-1 right-1 text-red-500"><IconHeart solid={true} className="w-3 h-3 drop-shadow-md" /></div>
+                            <div className="absolute top-1 right-1 text-red-500 pointer-events-none"><IconHeart solid={true} className="w-3 h-3 drop-shadow-md" /></div>
                         )}
                     </div>
                 ))}
