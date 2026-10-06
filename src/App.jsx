@@ -689,7 +689,7 @@ const App = () => {
                         <img 
                             src="TüFolk Logo.png" 
                             alt="TüFolk Logo" 
-                            className="w-48 h-48 object-cover p-1 rounded-full shadow-lg border border-gray-800 mb-4 bg-white" 
+                            className="w-48 h-48 object-cover p-1 shadow-lg border border-gray-800 mb-4 bg-white" 
                         />
                         <h1 className="text-3xl font-bold tracking-tight text-white">TüFolk Repertoire</h1>
                         <h5 className="text-3xl font-bold tracking-tight text-white">2023-2026</h5>
@@ -778,10 +778,6 @@ const App = () => {
             <div className="h-16 shrink-0 bg-gray-800 border-b border-gray-700 flex items-center justify-between px-3 sm:px-4 z-20 shadow-md">
                 <div className="flex items-center space-x-3">
                     <button onClick={() => setIsMenuOpen(true)} className="p-2 -ml-1 text-gray-300 hover:text-white hover:bg-gray-700 rounded-lg transition-colors active:scale-95"><IconMenu className="w-6 h-6" /></button>
-                    <div className="flex items-center space-x-2">
-                        <img src="TüFolk Logo.png" alt="Logo" className="w-8 h-8 object-cover rounded-full bg-white shadow" />
-                        <h1 className="font-bold text-base sm:text-lg text-blue-400 truncate">TüFolk</h1>
-                    </div>
 
                     <button onClick={handleInstallClick} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow transition-all border border-indigo-400/30">
                         <IconDownload className="w-4 h-4" /> <span className="hidden sm:inline">Install</span>
