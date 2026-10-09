@@ -38,7 +38,7 @@ export default defineConfig({
         maximumFileSizeToCacheInBytes: 100000000, 
         runtimeCaching: [
           {
-            urlPattern: /\.(?:wav|mp3|m4a|mp4|png|jpg|jpeg|webp)$/i,
+            urlPattern: /\.(?:png|jpg|jpeg|webp)$/i,
             handler: 'CacheFirst',
             options: {
               cacheName: 'media-runtime-cache',
