@@ -829,7 +829,12 @@ const App = () => {
                     ) : (
                         displayedSheets.map((sheet) => (
                             <button key={sheet.id} onClick={() => { setActiveId(sheet.id); if (window.innerWidth < 768) setIsMenuOpen(false); }} className={`w-full text-left px-3 py-2.5 rounded-lg flex items-center justify-between group transition-colors ${activeId === sheet.id ? 'bg-blue-600/20 text-blue-400 font-medium border border-blue-500/30' : 'text-gray-300 hover:bg-gray-800 hover:text-white border border-transparent'}`}>
-                                <span className="truncate pr-2 text-sm">{sheet.name}</span>
+                                <div className="truncate pr-2 flex flex-col">
+                                    <span className="text-sm">{sheet.name}</span>
+                                    {sheet.region && sheet.region !== "Unmapped" && (
+                                        <span className="text-[11px] text-gray-500 font-sans tracking-wide">{sheet.region.replace('*', '')}</span>
+                                    )}
+                                </div>
                                 <span className="flex items-center gap-1.5 shrink-0">
                                     {soundsBySong[sheet.id]?.length > 0 && <IconMusic className="w-3.5 h-3.5 text-gray-500" />}
                                     {sheet.isFavorite && <IconHeart solid={true} className={`w-4 h-4 ${activeId === sheet.id ? 'text-blue-400' : 'text-red-500 opacity-60 group-hover:opacity-100'}`} />}
