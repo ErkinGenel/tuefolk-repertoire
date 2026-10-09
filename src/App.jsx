@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { useRegisterSW } from 'virtual:pwa-register/react';
 import * as d3 from 'd3';
 import { geoPath, geoNaturalEarth1 } from 'd3-geo';
 
@@ -49,6 +50,9 @@ const IconList = ({ className }) => (
 );
 const IconDownload = ({ className }) => (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+);
+const IconClipboardList = ({ className }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
 );
 
 // --- METRONOME ENGINE ---
@@ -479,8 +483,24 @@ const App = () => {
     const [passwordInput, setPasswordInput] = useState('');
     const [loginError, setLoginError] = useState(false);
 
+    // --- PWA UPDATE CHECKER ---
+    const {
+        needRefresh: [needRefresh, setNeedRefresh],
+        updateServiceWorker,
+    } = useRegisterSW({
+        onRegistered(r) {
+            // Automatically check for new updates every 60 minutes
+            if (r) setInterval(() => r.update(), 60 * 60 * 1000);
+        },
+        onRegisterError(error) {
+            console.error('SW registration error', error);
+        }
+    });
+
     const [sheets, setSheets] = useState([]);
+    const [setlists, setSetlists] = useState([]);
     const [activeId, setActiveId] = useState(null);
+    const [activeSetlistId, setActiveSetlistId] = useState(null);
 
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -503,6 +523,7 @@ const App = () => {
     const thumbScrollLeft = useRef(0);
     const hasDragged = useRef(false);
 
+    // --- PWA INSTALLATION LOGIC ---
     useEffect(() => {
         const handleBeforeInstallPrompt = (e) => {
             e.preventDefault();
@@ -510,9 +531,7 @@ const App = () => {
             setIsInstallable(true);
         };
 
-        if (window.pwaInstallPrompt) {
-            handleBeforeInstallPrompt(window.pwaInstallPrompt);
-        }
+        if (window.pwaInstallPrompt) handleBeforeInstallPrompt(window.pwaInstallPrompt);
 
         window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
         window.addEventListener('appinstalled', () => {
@@ -537,15 +556,39 @@ const App = () => {
         }
     };
 
+    // --- SETLIST & DISPLAY FILTERING ---
     const displayedSheets = useMemo(() => {
-        let result = sheets;
+        let baseSheets = sheets;
+
+        // If a setlist is selected, strictly filter and order by the JSON file
+        if (activeSetlistId) {
+            const activeSetlist = setlists.find(s => s.id === activeSetlistId);
+            if (activeSetlist) {
+                const result = [];
+                const added = new Set();
+                activeSetlist.songs.forEach(songQuery => {
+                    const q = songQuery.toLowerCase();
+                    // Find all sheets that match this query part
+                    sheets.filter(s => s.name.toLowerCase().includes(q)).forEach(match => {
+                        if (!added.has(match.id)) {
+                            result.push(match);
+                            added.add(match.id);
+                        }
+                    });
+                });
+                baseSheets = result;
+            }
+        }
+
+        // Apply normal filters
+        let result = baseSheets;
         if (showFavoritesOnly) result = result.filter(s => s.isFavorite);
         if (searchQuery.trim() !== '') {
             const query = searchQuery.toLowerCase();
             result = result.filter(s => s.name.toLowerCase().includes(query));
         }
         return result;
-    }, [sheets, showFavoritesOnly, searchQuery]);
+    }, [sheets, showFavoritesOnly, searchQuery, activeSetlistId, setlists]);
 
     const activeIndex = useMemo(() => displayedSheets.findIndex(s => s.id === activeId), [displayedSheets, activeId]);
     const activeSheet = displayedSheets[activeIndex];
@@ -565,9 +608,18 @@ const App = () => {
 
     const activeTracks = activeSheet ? soundsBySong[activeSheet.id] || [] : [];
 
+    // Ensure we start on the first song of the newly selected setlist
     useEffect(() => {
-        if (displayedSheets.length > 0 && activeIndex === -1 && isAuthenticated) setActiveId(displayedSheets[0].id);
-    }, [displayedSheets, activeIndex, isAuthenticated]);
+        if (activeSetlistId && displayedSheets.length > 0) {
+            if (!displayedSheets.find(s => s.id === activeId)) {
+                setActiveId(displayedSheets[0].id);
+            }
+        }
+    }, [activeSetlistId, displayedSheets, activeId]);
+
+    useEffect(() => {
+        if (displayedSheets.length > 0 && activeIndex === -1 && isAuthenticated && !activeSetlistId) setActiveId(displayedSheets[0].id);
+    }, [displayedSheets, activeIndex, isAuthenticated, activeSetlistId]);
 
     const handleLogin = (e) => {
         e.preventDefault();
@@ -581,11 +633,13 @@ const App = () => {
         }
     };
 
+    // --- DATA LOADING ---
     useEffect(() => {
         if (!isAuthenticated) return;
         const savedFavs = (() => { try { return JSON.parse(local.get('folkFavorites', '[]')); } catch { return []; } })();
-        const imageModules = import.meta.glob('./assets/images/*.{png,jpg,jpeg,gif,webp}', { eager: true, import: 'default' });
         
+        // 1. Load Sheet Music Images
+        const imageModules = import.meta.glob('./assets/images/*.{png,jpg,jpeg,gif,webp}', { eager: true, import: 'default' });
         const loadedSheets = Object.entries(imageModules).map(([path, url]) => {
             const filename = path.split('/').pop();
             const name = filename.replace(/\.[^/.]+$/, '');
@@ -601,12 +655,25 @@ const App = () => {
 
             return { id: filename, name, url, groupKey: songKey(name), region: region || "Unmapped", isFavorite: savedFavs.includes(filename) };
         });
-
         loadedSheets.sort((a, b) => a.name.localeCompare(b.name));
         setSheets(loadedSheets);
         if (loadedSheets.length > 0) setActiveId(loadedSheets[0].id);
+
+        // 2. Load Setlists JSONs
+        const setlistModules = import.meta.glob('./assets/setlists/*.json', { eager: true, import: 'default' });
+        const loadedSetlists = Object.entries(setlistModules).map(([path, data]) => {
+            const id = path.split('/').pop().replace('.json', '');
+            return {
+                id,
+                title: data.title || id,
+                songs: data.songs || []
+            };
+        }).sort((a, b) => a.title.localeCompare(b.title));
+        setSetlists(loadedSetlists);
+
     }, [isAuthenticated]);
 
+    // --- NAVIGATION HELPERS ---
     const goNext = () => {
         if (displayedSheets.length === 0) return;
         setActiveId(displayedSheets[(activeIndex + 1) % displayedSheets.length].id);
@@ -681,6 +748,7 @@ const App = () => {
 
     useEffect(() => { return () => metronomeEngine.stop(); }, []);
 
+    // --- RENDER ---
     if (!isAuthenticated) {
         return (
             <div className="h-[100dvh] w-screen flex items-center justify-center bg-gray-950 text-gray-100 font-sans p-4">
@@ -689,10 +757,9 @@ const App = () => {
                         <img 
                             src="TüFolk Logo.png" 
                             alt="TüFolk Logo" 
-                            className="w-64 h-64 object-cover rounded-full p-5 shadow-lg border border-gray-800 mb-4 bg-white" 
+                            className="w-32 h-32 object-cover p-1 rounded-full shadow-lg border border-gray-800 mb-4 bg-white" 
                         />
                         <h1 className="text-3xl font-bold tracking-tight text-white">TüFolk Repertoire</h1>
-                        <h5 className="text-3xl font-bold tracking-tight text-white">2023-2026</h5>
                     </div>
                     <p className="text-gray-400 text-sm text-center mb-6">Enter your password to access the sheet music collection.</p>
                     <form onSubmit={handleLogin} className="w-full space-y-4">
@@ -715,11 +782,34 @@ const App = () => {
             <div className={`fixed inset-y-0 left-0 w-80 max-w-[85vw] bg-gray-900 border-r border-gray-800 z-50 transform transition-transform duration-300 flex flex-col shadow-2xl ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
                 <div className="p-4 border-b border-gray-800 flex justify-between items-center bg-gray-900 shrink-0">
                     <h2 className="text-lg font-bold text-gray-100 flex items-center gap-2">
-                        <img src="TüFolk Logo.png" alt="Logo" className="w-6 h-6 object-cover rounded-full bg-white" />
+                        <img src="TüFolk Logo.png" alt="Logo" className="w-6 h-6 object-cover p-0.5 rounded-full bg-white shadow" />
                         Song List ({sheets.length})
                     </h2>
                     <button onClick={() => setIsMenuOpen(false)} className="p-2 text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"><IconX className="w-5 h-5" /></button>
                 </div>
+
+                {setlists.length > 0 && (
+                    <div className="p-3 border-b border-gray-800 bg-gray-900/80 shrink-0">
+                        <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Concert Setlists</div>
+                        <div className="space-y-1.5 max-h-40 overflow-y-auto hide-scrollbar">
+                            {setlists.map(setlist => (
+                                <button
+                                    key={setlist.id}
+                                    onClick={() => {
+                                        setActiveSetlistId(activeSetlistId === setlist.id ? null : setlist.id);
+                                        if (window.innerWidth < 768) setIsMenuOpen(false);
+                                    }}
+                                    className={`w-full text-left px-3 py-2 rounded-lg text-sm flex items-center justify-between transition-colors ${activeSetlistId === setlist.id ? 'bg-purple-600/20 text-purple-400 border border-purple-500/30 font-medium' : 'text-gray-300 hover:bg-gray-800 border border-transparent'}`}
+                                >
+                                    <span className="truncate flex items-center gap-2">
+                                        <IconClipboardList className="w-4 h-4 opacity-70" />
+                                        {setlist.title}
+                                    </span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
 
                 <div className="p-4 border-b border-gray-800 space-y-4 bg-gray-900/50 shrink-0">
                     <div className="relative">
@@ -751,6 +841,24 @@ const App = () => {
                 <div className="p-3 border-t border-gray-800 text-xs font-mono text-gray-500 text-center bg-gray-900 shrink-0">{displayedSheets.length} {displayedSheets.length === 1 ? 'RESULT' : 'RESULTS'}</div>
             </div>
 
+            {/* APP UPDATE NOTIFICATION BANNER */}
+            {needRefresh && (
+                <div className="fixed bottom-32 sm:bottom-36 right-4 z-[100] bg-indigo-600 border border-indigo-400 p-4 rounded-xl shadow-2xl flex flex-col gap-3 max-w-[280px]">
+                    <div className="flex items-start justify-between gap-2">
+                        <div>
+                            <p className="font-bold text-white text-sm">Update Available! 🎉</p>
+                            <p className="text-xs text-indigo-200 mt-1">A new version is ready. Update now to get the latest sheet music and features.</p>
+                        </div>
+                        <button onClick={() => setNeedRefresh(false)} className="text-indigo-300 hover:text-white transition-colors shrink-0">
+                            <IconX className="w-5 h-5" />
+                        </button>
+                    </div>
+                    <button onClick={() => updateServiceWorker(true)} className="w-full py-2 bg-white text-indigo-600 rounded-lg text-sm font-bold shadow hover:bg-gray-100 transition-colors">
+                        Update App Now
+                    </button>
+                </div>
+            )}
+
             {showInstallModal && (
                 <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setShowInstallModal(false)}>
                     <div className="bg-gray-900 border border-gray-700 p-6 rounded-2xl max-w-sm w-full shadow-2xl relative" onClick={e => e.stopPropagation()}>
@@ -778,6 +886,10 @@ const App = () => {
             <div className="h-16 shrink-0 bg-gray-800 border-b border-gray-700 flex items-center justify-between px-3 sm:px-4 z-20 shadow-md">
                 <div className="flex items-center space-x-3">
                     <button onClick={() => setIsMenuOpen(true)} className="p-2 -ml-1 text-gray-300 hover:text-white hover:bg-gray-700 rounded-lg transition-colors active:scale-95"><IconMenu className="w-6 h-6" /></button>
+                    <div className="flex items-center space-x-2">
+                        <img src="TüFolk Logo.png" alt="Logo" className="w-8 h-8 object-cover p-0.5 rounded-full bg-white shadow" />
+                        <h1 className="font-bold text-base sm:text-lg text-blue-400 truncate">TüFolk Repertoire</h1>
+                    </div>
 
                     <button onClick={handleInstallClick} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow transition-all border border-indigo-400/30">
                         <IconDownload className="w-4 h-4" /> <span className="hidden sm:inline">Install</span>
@@ -806,9 +918,19 @@ const App = () => {
                     </div>
                 </div>
             </div>
+            
+            {/* ACTIVE SETLIST BANNER */}
+            {activeSetlistId && (
+                <div className="w-full shrink-0 bg-purple-900/90 text-purple-100 px-4 py-2 flex items-center justify-between shadow-md z-20 border-b border-purple-700">
+                    <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold truncate">📋 Setlist Mode: {setlists.find(s => s.id === activeSetlistId)?.title}</span>
+                    </div>
+                    <button onClick={() => setActiveSetlistId(null)} className="text-xs bg-purple-700 hover:bg-purple-600 px-3 py-1.5 rounded-md transition-colors font-medium border border-purple-500/50 shadow-sm shrink-0">Clear Setlist</button>
+                </div>
+            )}
 
             {/* MAIN CONTENT AREA */}
-            <div className="flex-1 relative flex items-center justify-center overflow-hidden bg-black outline-none min-h-0" tabIndex={0}>
+            <div className="flex-1 relative flex items-center justify-center overflow-hidden bg-black outline-none min-h-0 w-full" tabIndex={0}>
                 {displayedSheets.length === 0 ? (
                     <div className="text-gray-500 flex flex-col items-center">
                         <IconMusic className="w-16 h-16 mb-4 opacity-20" />
