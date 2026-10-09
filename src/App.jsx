@@ -752,22 +752,22 @@ const App = () => {
     if (!isAuthenticated) {
         return (
             <div className="h-[100dvh] w-screen flex items-center justify-center bg-gray-950 text-gray-100 font-sans p-4">
-                <div className="max-w-md w-full bg-gray-900 border border-gray-800 rounded-2xl p-8 shadow-2xl flex flex-col items-center">
-                    <div className="mb-6 flex flex-col items-center">
+                <div className="max-w-md w-full bg-gray-900 border border-gray-800 rounded-2xl p-6 sm:p-8 shadow-2xl flex flex-col items-center">
+                    <div className="mb-6 flex flex-col items-center text-center">
                         <img 
                             src="TüFolk Logo.png" 
                             alt="TüFolk Logo" 
-                            className="w-32 h-32 object-cover p-1 rounded-full shadow-lg border border-gray-800 mb-4 bg-white" 
+                            className="w-48 h-48 sm:w-64 sm:h-64 object-cover p-1 rounded-full shadow-lg border border-gray-800 mb-6 bg-white" 
                         />
-                        <h1 className="text-3xl font-bold tracking-tight text-white">TüFolk Repertoire</h1>
+                        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">TüFolk Repertoire</h1>
+                        <h5 className="text-lg sm:text-xl font-bold tracking-tight text-gray-400 mt-1">2023-2026</h5>
                     </div>
-                    <p className="text-gray-400 text-sm text-center mb-6">Enter your password to access the sheet music collection.</p>
                     <form onSubmit={handleLogin} className="w-full space-y-4">
                         <div>
                             <input type="password" placeholder="Password" value={passwordInput} onChange={(e) => setPasswordInput(e.target.value)} className={`w-full px-4 py-3 bg-gray-950 border rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 transition-all ${loginError ? 'border-red-500 focus:ring-red-500' : 'border-gray-800 focus:ring-blue-500'}`} autoFocus />
                             {loginError && <p className="text-xs text-red-400 mt-2 ml-1">Incorrect password. Please try again.</p>}
                         </div>
-                        <button type="submit" className="w-full py-3 bg-blue-600 hover:bg-blue-500 active:scale-[0.98] transition-all font-semibold rounded-xl text-white shadow-lg shadow-blue-600/20">Unlock Repertoire</button>
+                        <button type="submit" className="w-full py-3 bg-blue-600 hover:bg-blue-500 active:scale-[0.98] transition-all font-semibold rounded-xl text-white shadow-lg shadow-blue-600/20">Unlock</button>
                     </form>
                 </div>
             </div>
@@ -883,38 +883,40 @@ const App = () => {
             )}
 
             {/* TOP HEADER */}
-            <div className="h-16 shrink-0 bg-gray-800 border-b border-gray-700 flex items-center justify-between px-3 sm:px-4 z-20 shadow-md">
-                <div className="flex items-center space-x-3">
-                    <button onClick={() => setIsMenuOpen(true)} className="p-2 -ml-1 text-gray-300 hover:text-white hover:bg-gray-700 rounded-lg transition-colors active:scale-95"><IconMenu className="w-6 h-6" /></button>
-                    <div className="flex items-center space-x-2">
-                        <img src="TüFolk Logo.png" alt="Logo" className="w-8 h-8 object-cover p-0.5 rounded-full bg-white shadow" />
-                        <h1 className="font-bold text-base sm:text-lg text-blue-400 truncate">TüFolk Repertoire</h1>
-                    </div>
-
-                    <button onClick={handleInstallClick} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow transition-all border border-indigo-400/30">
-                        <IconDownload className="w-4 h-4" /> <span className="hidden sm:inline">Install</span>
-                    </button>
-
-                    <button onClick={() => setShowFavoritesOnly(!showFavoritesOnly)} className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg transition-colors border ${showFavoritesOnly ? 'bg-red-900/30 text-red-400 border-red-500/30' : 'bg-gray-700/50 hover:bg-gray-600 border-transparent text-gray-300'}`}>
-                        <IconHeart solid={showFavoritesOnly} className="w-5 h-5" />
-                        <span className="text-sm font-medium hidden md:block">Favorites</span>
-                    </button>
-
-                    <div className="flex items-center bg-gray-900/80 p-1 rounded-lg border border-gray-700 ml-1 sm:ml-4 shadow-inner">
-                        <button onClick={() => setViewMode('viewer')} className={`p-1.5 rounded-md transition-all ${viewMode === 'viewer' ? 'bg-blue-600 text-white shadow' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`} title="Sheet Viewer"><IconMusic className="w-4 h-4" /></button>
-                        <button onClick={() => setViewMode('map')} className={`p-1.5 rounded-md transition-all ${viewMode === 'map' ? 'bg-blue-600 text-white shadow' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`} title="World Map Overview"><IconMap className="w-4 h-4" /></button>
+            <div className="h-16 shrink-0 bg-gray-800 border-b border-gray-700 flex items-center justify-between px-2 sm:px-4 z-20 shadow-md">
+                <div className="flex items-center space-x-1 sm:space-x-3 min-w-0 flex-1">
+                    <button onClick={() => setIsMenuOpen(true)} className="p-1.5 sm:p-2 text-gray-300 hover:text-white hover:bg-gray-700 rounded-lg transition-colors active:scale-95 shrink-0"><IconMenu className="w-6 h-6" /></button>
+                    <div className="flex items-center space-x-2 min-w-0 pr-2">
+                        <img src="TüFolk Logo.png" alt="Logo" className="w-7 h-7 sm:w-8 sm:h-8 object-cover p-0.5 rounded-full bg-white shadow shrink-0" />
+                        <h1 className="font-bold text-[13px] sm:text-base md:text-lg text-blue-400 truncate">TüFolk Repertoire</h1>
                     </div>
                 </div>
 
-                <div className="flex items-center bg-gray-900/60 rounded-xl p-1 px-3 border border-gray-700 shadow-inner">
-                    <button onClick={toggleMetronome} className={`w-8 h-8 flex items-center justify-center rounded-lg mr-3 transition-all ${metroPlaying ? 'bg-green-600 text-white shadow-[0_0_15px_rgba(22,163,74,0.5)]' : 'bg-gray-700 hover:bg-gray-600 text-gray-300'}`}>
-                        {metroPlaying ? <div className="w-3 h-3 bg-white rounded-sm animate-pulse"></div> : <svg className="w-4 h-4 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>}
+                <div className="flex items-center gap-1 sm:gap-3 shrink-0">
+                    <button onClick={handleInstallClick} className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow transition-all border border-indigo-400/30">
+                        <IconDownload className="w-4 h-4" /> <span className="hidden lg:inline">Install</span>
                     </button>
-                    <div className="flex flex-col w-20 sm:w-32">
-                        <div className="flex justify-between text-[10px] sm:text-xs text-gray-400 font-mono mb-1">
-                            <span>BPM</span><span className="font-bold text-gray-200">{bpm}</span>
+
+                    <button onClick={() => setShowFavoritesOnly(!showFavoritesOnly)} className={`flex items-center space-x-1.5 px-2 sm:px-3 py-1.5 rounded-lg transition-colors border ${showFavoritesOnly ? 'bg-red-900/30 text-red-400 border-red-500/30' : 'bg-gray-700/50 hover:bg-gray-600 border-transparent text-gray-300'}`}>
+                        <IconHeart solid={showFavoritesOnly} className="w-4 h-4 sm:w-5 sm:h-5" />
+                        <span className="text-sm font-medium hidden lg:block">Favorites</span>
+                    </button>
+
+                    <div className="flex items-center bg-gray-900/80 p-1 rounded-lg border border-gray-700 shadow-inner">
+                        <button onClick={() => setViewMode('viewer')} className={`p-1.5 rounded-md transition-all ${viewMode === 'viewer' ? 'bg-blue-600 text-white shadow' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`} title="Sheet Viewer"><IconMusic className="w-4 h-4" /></button>
+                        <button onClick={() => setViewMode('map')} className={`p-1.5 rounded-md transition-all ${viewMode === 'map' ? 'bg-blue-600 text-white shadow' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`} title="World Map Overview"><IconMap className="w-4 h-4" /></button>
+                    </div>
+
+                    <div className="flex items-center bg-gray-900/60 rounded-xl p-1 px-1.5 sm:px-3 border border-gray-700 shadow-inner">
+                        <button onClick={toggleMetronome} className={`w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-lg mr-1.5 sm:mr-3 transition-all ${metroPlaying ? 'bg-green-600 text-white shadow-[0_0_15px_rgba(22,163,74,0.5)]' : 'bg-gray-700 hover:bg-gray-600 text-gray-300'}`}>
+                            {metroPlaying ? <div className="w-2.5 h-2.5 bg-white rounded-sm animate-pulse"></div> : <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>}
+                        </button>
+                        <div className="flex flex-col w-12 sm:w-20 md:w-32">
+                            <div className="flex justify-between text-[8px] sm:text-[10px] md:text-xs text-gray-400 font-mono mb-1">
+                                <span className="hidden sm:inline">BPM</span><span className="font-bold text-gray-200 w-full sm:w-auto text-center">{bpm}</span>
+                            </div>
+                            <input type="range" min="40" max="240" value={bpm} onChange={handleBpmChange} className="w-full h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-blue-500" />
                         </div>
-                        <input type="range" min="40" max="240" value={bpm} onChange={handleBpmChange} className="w-full h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-blue-500" />
                     </div>
                 </div>
             </div>
