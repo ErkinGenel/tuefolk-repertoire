@@ -526,6 +526,7 @@ const App = () => {
     const touchEndX = useRef(0);
 
     const thumbnailsRef = useRef(null);
+    const thumbItemRefs = useRef({});
     const isThumbDrag = useRef(false);
     const thumbStartX = useRef(0);
     const thumbScrollLeft = useRef(0);
@@ -776,6 +777,18 @@ const App = () => {
             thumbnailsRef.current.scrollLeft += e.deltaY;
         }
     };
+
+    // Keep the selected thumbnail visible in the bottom strip
+    useEffect(() => {
+        if (viewMode !== 'viewer' || !activeId) return;
+        const el = thumbItemRefs.current[activeId];
+        if (!el) return;
+        // wait one frame so the strip is laid out (e.g. after switching back from the map)
+        const raf = requestAnimationFrame(() => {
+            el.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+        });
+        return () => cancelAnimationFrame(raf);
+    }, [activeId, viewMode, displayedSheets]);
 
     const toggleMetronome = () => {
         if (metroPlaying) { metronomeEngine.stop(); setMetroPlaying(false); }
@@ -1050,6 +1063,10 @@ const App = () => {
                     {displayedSheets.map((sheet) => (
                         <div 
                             key={sheet.id} 
+                            ref={(el) => {
+                                if (el) thumbItemRefs.current[sheet.id] = el;
+                                else delete thumbItemRefs.current[sheet.id];
+                            }}
                             onClick={() => { if (!hasDragged.current) setActiveId(sheet.id); }} 
                             className={`relative h-full shrink-0 w-16 sm:w-20 rounded-lg transition-all duration-200 overflow-hidden ${sheet.id === activeId ? 'ring-2 ring-blue-500 scale-95 opacity-100' : 'opacity-50 hover:opacity-100'}`}
                         >
