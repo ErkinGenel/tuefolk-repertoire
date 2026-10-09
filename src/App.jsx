@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { useRegisterSW } from 'virtual:pwa-register/react';
 import * as d3 from 'd3';
 import { geoPath, geoNaturalEarth1 } from 'd3-geo';
 
@@ -19,9 +20,6 @@ const IconMap = ({ className }) => (
 );
 const IconMusic = ({ className }) => (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path></svg>
-);
-const IconLock = ({ className }) => (
-    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
 );
 const IconMenu = ({ className }) => (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16"></path></svg>
@@ -476,6 +474,21 @@ const CORRECT_PASSWORD = 'folk';
 
 const App = () => {
     const [isAuthenticated, setIsAuthenticated] = useState(() => session.get('folkAuth') === 'true');
+    
+    // --- PWA UPDATE CHECKER ---
+    const {
+        needRefresh: [needRefresh, setNeedRefresh],
+        updateServiceWorker,
+    } = useRegisterSW({
+        onRegistered(r) {
+            // Automatically check for new updates every 60 minutes
+            if (r) setInterval(() => r.update(), 60 * 60 * 1000);
+        },
+        onRegisterError(error) {
+            console.error('SW registration error', error);
+        }
+    });
+
     const [passwordInput, setPasswordInput] = useState('');
     const [loginError, setLoginError] = useState(false);
 
@@ -491,7 +504,6 @@ const App = () => {
     const [bpm, setBpm] = useState(100);
 
     const [deferredPrompt, setDeferredPrompt] = useState(null);
-    const [isInstallable, setIsInstallable] = useState(false);
     const [showInstallModal, setShowInstallModal] = useState(false);
 
     const touchStartX = useRef(0);
@@ -507,7 +519,6 @@ const App = () => {
         const handleBeforeInstallPrompt = (e) => {
             e.preventDefault();
             setDeferredPrompt(e);
-            setIsInstallable(true);
         };
 
         if (window.pwaInstallPrompt) {
@@ -517,7 +528,6 @@ const App = () => {
         window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
         window.addEventListener('appinstalled', () => {
             setDeferredPrompt(null);
-            setIsInstallable(false);
             window.pwaInstallPrompt = null;
         });
 
@@ -530,7 +540,6 @@ const App = () => {
             const { outcome } = await deferredPrompt.userChoice;
             if (outcome === 'accepted') {
                 setDeferredPrompt(null);
-                setIsInstallable(false);
             }
         } else {
             setShowInstallModal(true);
@@ -689,10 +698,9 @@ const App = () => {
                         <img 
                             src="TüFolk Logo.png" 
                             alt="TüFolk Logo" 
-                            className="w-64 h-64 object-cover rounded-full p-5 shadow-lg border border-gray-800 mb-4 bg-white" 
+                            className="w-32 h-32 object-cover p-1 rounded-full shadow-lg border border-gray-800 mb-4 bg-white" 
                         />
                         <h1 className="text-3xl font-bold tracking-tight text-white">TüFolk Repertoire</h1>
-                        <h5 className="text-3xl font-bold tracking-tight text-white">2023-2026</h5>
                     </div>
                     <p className="text-gray-400 text-sm text-center mb-6">Enter your password to access the sheet music collection.</p>
                     <form onSubmit={handleLogin} className="w-full space-y-4">
@@ -715,7 +723,7 @@ const App = () => {
             <div className={`fixed inset-y-0 left-0 w-80 max-w-[85vw] bg-gray-900 border-r border-gray-800 z-50 transform transition-transform duration-300 flex flex-col shadow-2xl ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
                 <div className="p-4 border-b border-gray-800 flex justify-between items-center bg-gray-900 shrink-0">
                     <h2 className="text-lg font-bold text-gray-100 flex items-center gap-2">
-                        <img src="TüFolk Logo.png" alt="Logo" className="w-6 h-6 object-cover rounded-full bg-white" />
+                        <img src="TüFolk Logo.png" alt="Logo" className="w-6 h-6 object-cover p-0.5 rounded-full bg-white" />
                         Song List ({sheets.length})
                     </h2>
                     <button onClick={() => setIsMenuOpen(false)} className="p-2 text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"><IconX className="w-5 h-5" /></button>
@@ -751,6 +759,24 @@ const App = () => {
                 <div className="p-3 border-t border-gray-800 text-xs font-mono text-gray-500 text-center bg-gray-900 shrink-0">{displayedSheets.length} {displayedSheets.length === 1 ? 'RESULT' : 'RESULTS'}</div>
             </div>
 
+            {/* APP UPDATE NOTIFICATION BANNER */}
+            {needRefresh && (
+                <div className="fixed bottom-32 sm:bottom-36 right-4 z-[100] bg-indigo-600 border border-indigo-400 p-4 rounded-xl shadow-2xl flex flex-col gap-3 max-w-[280px]">
+                    <div className="flex items-start justify-between gap-2">
+                        <div>
+                            <p className="font-bold text-white text-sm">Update Available! 🎉</p>
+                            <p className="text-xs text-indigo-200 mt-1">A new version is ready. Update now to get the latest sheet music and features.</p>
+                        </div>
+                        <button onClick={() => setNeedRefresh(false)} className="text-indigo-300 hover:text-white transition-colors shrink-0">
+                            <IconX className="w-5 h-5" />
+                        </button>
+                    </div>
+                    <button onClick={() => updateServiceWorker(true)} className="w-full py-2 bg-white text-indigo-600 rounded-lg text-sm font-bold shadow hover:bg-gray-100 transition-colors">
+                        Update App Now
+                    </button>
+                </div>
+            )}
+
             {showInstallModal && (
                 <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setShowInstallModal(false)}>
                     <div className="bg-gray-900 border border-gray-700 p-6 rounded-2xl max-w-sm w-full shadow-2xl relative" onClick={e => e.stopPropagation()}>
@@ -778,6 +804,10 @@ const App = () => {
             <div className="h-16 shrink-0 bg-gray-800 border-b border-gray-700 flex items-center justify-between px-3 sm:px-4 z-20 shadow-md">
                 <div className="flex items-center space-x-3">
                     <button onClick={() => setIsMenuOpen(true)} className="p-2 -ml-1 text-gray-300 hover:text-white hover:bg-gray-700 rounded-lg transition-colors active:scale-95"><IconMenu className="w-6 h-6" /></button>
+                    <div className="flex items-center space-x-2">
+                        <img src="TüFolk Logo.png" alt="Logo" className="w-8 h-8 object-cover p-0.5 rounded-full bg-white shadow" />
+                        <h1 className="font-bold text-base sm:text-lg text-blue-400 truncate">TüFolk Repertoire</h1>
+                    </div>
 
                     <button onClick={handleInstallClick} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow transition-all border border-indigo-400/30">
                         <IconDownload className="w-4 h-4" /> <span className="hidden sm:inline">Install</span>
