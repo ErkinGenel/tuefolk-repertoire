@@ -194,7 +194,7 @@ const Tooltip = ({ data, x, y, visible, onSelect, onClose }) => {
             
             <ul className="list-none p-0 m-0 overflow-y-auto hide-scrollbar space-y-1.5 flex-1">
                 {data.songs.map(song => (
-                    <li key={song.id}>
+                    <li key={song.groupKey}>
                         <button
                             onClick={() => {
                                 onSelect(song.id);
@@ -203,7 +203,8 @@ const Tooltip = ({ data, x, y, visible, onSelect, onClose }) => {
                             className="w-full text-left px-3 py-2 rounded-md transition-all text-[18px] sm:text-[20px] leading-tight font-medium bg-[#d94a38]/5 hover:bg-[#d94a38]/20 hover:text-[#a72818] border border-transparent hover:border-[#d94a38]/30 hover:pl-4"
                         >
                             <span className="text-[#8c7a61] opacity-50 mr-2 text-sm font-sans">🎵</span>
-                            {song.name}
+                            {song.title}
+                            {song.country && <span className="ml-2 text-sm text-[#8c7a61] font-sans">({song.country})</span>}
                         </button>
                     </li>
                 ))}
@@ -235,7 +236,15 @@ function WorldMap({ sheets, onSelect }) {
                 const key = coords.join(",");
                 if (!mapData[key]) mapData[key] = { coords: coords, countries: new Set(), songs: [] };
                 mapData[key].countries.add(song.region.replace('*', ''));
-                mapData[key].songs.push(song);
+                // only one entry per song (tutti, rehearsals, Chords_p1 ... collapse into one)
+                if (!mapData[key].songs.some(s => s.groupKey === song.groupKey)) {
+                    mapData[key].songs.push({
+                        id: song.id,
+                        groupKey: song.groupKey,
+                        title: song.cleanTitle,
+                        country: song.country
+                    });
+                }
             }
         });
         
@@ -489,7 +498,6 @@ const App = () => {
         updateServiceWorker,
     } = useRegisterSW({
         onRegistered(r) {
-            // Automatically check for new updates every 60 minutes
             if (r) setInterval(() => r.update(), 60 * 60 * 1000);
         },
         onRegisterError(error) {
@@ -560,7 +568,6 @@ const App = () => {
     const displayedSheets = useMemo(() => {
         let baseSheets = sheets;
 
-        // If a setlist is selected, strictly filter and order by the JSON file
         if (activeSetlistId) {
             const activeSetlist = setlists.find(s => s.id === activeSetlistId);
             if (activeSetlist) {
@@ -568,8 +575,7 @@ const App = () => {
                 const added = new Set();
                 activeSetlist.songs.forEach(songQuery => {
                     const q = songQuery.toLowerCase();
-                    // Find all sheets that match this query part
-                    sheets.filter(s => s.name.toLowerCase().includes(q)).forEach(match => {
+                    sheets.filter(s => s.name.toLowerCase().includes(q) || s.groupKey.includes(normalize(q))).forEach(match => {
                         if (!added.has(match.id)) {
                             result.push(match);
                             added.add(match.id);
@@ -580,18 +586,37 @@ const App = () => {
             }
         }
 
-        // Apply normal filters
         let result = baseSheets;
         if (showFavoritesOnly) result = result.filter(s => s.isFavorite);
         if (searchQuery.trim() !== '') {
             const query = searchQuery.toLowerCase();
-            result = result.filter(s => s.name.toLowerCase().includes(query));
+            result = result.filter(s => s.name.toLowerCase().includes(query) || (s.region && s.region.toLowerCase().includes(query)));
         }
         return result;
     }, [sheets, showFavoritesOnly, searchQuery, activeSetlistId, setlists]);
 
     const activeIndex = useMemo(() => displayedSheets.findIndex(s => s.id === activeId), [displayedSheets, activeId]);
     const activeSheet = displayedSheets[activeIndex];
+
+    // Compute unique songs for the sidebar (grouping multi-file sheets under one title + country)
+    const uniqueSidebarSongs = useMemo(() => {
+        const map = new Map();
+        displayedSheets.forEach(sheet => {
+            if (!map.has(sheet.groupKey)) {
+                map.set(sheet.groupKey, {
+                    groupKey: sheet.groupKey,
+                    title: sheet.cleanTitle,
+                    country: sheet.country,
+                    region: sheet.region,
+                    firstId: sheet.id,
+                    isFavorite: sheet.isFavorite
+                });
+            } else if (sheet.isFavorite) {
+                map.get(sheet.groupKey).isFavorite = true;
+            }
+        });
+        return Array.from(map.values());
+    }, [displayedSheets]);
 
     const soundsBySong = useMemo(() => {
         const byKey = {};
@@ -608,7 +633,6 @@ const App = () => {
 
     const activeTracks = activeSheet ? soundsBySong[activeSheet.id] || [] : [];
 
-    // Ensure we start on the first song of the newly selected setlist
     useEffect(() => {
         if (activeSetlistId && displayedSheets.length > 0) {
             if (!displayedSheets.find(s => s.id === activeId)) {
@@ -638,28 +662,45 @@ const App = () => {
         if (!isAuthenticated) return;
         const savedFavs = (() => { try { return JSON.parse(local.get('folkFavorites', '[]')); } catch { return []; } })();
         
-        // 1. Load Sheet Music Images
         const imageModules = import.meta.glob('./assets/images/*.{png,jpg,jpeg,gif,webp}', { eager: true, import: 'default' });
         const loadedSheets = Object.entries(imageModules).map(([path, url]) => {
             const filename = path.split('/').pop();
             const name = filename.replace(/\.[^/.]+$/, '');
             let region = null;
-            
-            const match = name.match(/\(([^)]+)\)/);
-            if (match) region = match[1].trim();
-            
-            if (!region || (!GEO_DICT[region] && !GEO_DICT[region.replace('*', '')])) {
-                const foundKey = Object.keys(GEO_DICT).find(countryKey => name.toLowerCase().includes(countryKey.replace('*', '').toLowerCase()));
-                if (foundKey) region = foundKey;
+            let cleanTitle = name;
+            let country = null;
+
+            // Format: "<SongTitle> (<Country>) - <something else>"
+            const match = name.match(/^(.*?)\s*\(([^)]+)\)/);
+            if (match) {
+                cleanTitle = match[1].trim();
+                region = match[2].trim();
+                country = region.replace('*', '').trim();
             }
 
-            return { id: filename, name, url, groupKey: songKey(name), region: region || "Unmapped", isFavorite: savedFavs.includes(filename) };
+            if (!region || (!GEO_DICT[region] && !GEO_DICT[region.replace('*', '')])) {
+                const foundKey = Object.keys(GEO_DICT).find(countryKey => name.toLowerCase().includes(countryKey.replace('*', '').toLowerCase()));
+                if (foundKey) {
+                    region = foundKey;
+                    country = country || foundKey.replace('*', '');
+                }
+            }
+
+            return { 
+                id: filename, 
+                name, 
+                cleanTitle,
+                country,
+                url, 
+                groupKey: songKey(name), 
+                region: region || "Unmapped", 
+                isFavorite: savedFavs.includes(filename) 
+            };
         });
-        loadedSheets.sort((a, b) => a.name.localeCompare(b.name));
+        loadedSheets.sort((a, b) => a.cleanTitle.localeCompare(b.cleanTitle));
         setSheets(loadedSheets);
         if (loadedSheets.length > 0) setActiveId(loadedSheets[0].id);
 
-        // 2. Load Setlists JSONs
         const setlistModules = import.meta.glob('./assets/setlists/*.json', { eager: true, import: 'default' });
         const loadedSetlists = Object.entries(setlistModules).map(([path, data]) => {
             const id = path.split('/').pop().replace('.json', '');
@@ -783,7 +824,7 @@ const App = () => {
                 <div className="p-4 border-b border-gray-800 flex justify-between items-center bg-gray-900 shrink-0">
                     <h2 className="text-lg font-bold text-gray-100 flex items-center gap-2">
                         <img src="TüFolk Logo.png" alt="Logo" className="w-6 h-6 object-cover p-0.5 rounded-full bg-white shadow" />
-                        Song List ({sheets.length})
+                        Song List ({uniqueSidebarSongs.length})
                     </h2>
                     <button onClick={() => setIsMenuOpen(false)} className="p-2 text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"><IconX className="w-5 h-5" /></button>
                 </div>
@@ -824,26 +865,36 @@ const App = () => {
                 </div>
 
                 <div className="flex-1 overflow-y-auto hide-scrollbar p-3 space-y-1 bg-gray-950/30">
-                    {displayedSheets.length === 0 ? (
+                    {uniqueSidebarSongs.length === 0 ? (
                         <div className="text-center text-gray-500 text-sm mt-8 flex flex-col items-center"><IconSearch className="w-8 h-8 mb-2 opacity-20" /> No matching songs found.</div>
                     ) : (
-                        displayedSheets.map((sheet) => (
-                            <button key={sheet.id} onClick={() => { setActiveId(sheet.id); if (window.innerWidth < 768) setIsMenuOpen(false); }} className={`w-full text-left px-3 py-2.5 rounded-lg flex items-center justify-between group transition-colors ${activeId === sheet.id ? 'bg-blue-600/20 text-blue-400 font-medium border border-blue-500/30' : 'text-gray-300 hover:bg-gray-800 hover:text-white border border-transparent'}`}>
-                                <div className="truncate pr-2 flex flex-col">
-                                    <span className="text-sm">{sheet.name}</span>
-                                    {sheet.region && sheet.region !== "Unmapped" && (
-                                        <span className="text-[11px] text-gray-500 font-sans tracking-wide">{sheet.region.replace('*', '')}</span>
-                                    )}
-                                </div>
-                                <span className="flex items-center gap-1.5 shrink-0">
-                                    {soundsBySong[sheet.id]?.length > 0 && <IconMusic className="w-3.5 h-3.5 text-gray-500" />}
-                                    {sheet.isFavorite && <IconHeart solid={true} className={`w-4 h-4 ${activeId === sheet.id ? 'text-blue-400' : 'text-red-500 opacity-60 group-hover:opacity-100'}`} />}
-                                </span>
-                            </button>
-                        ))
+                        uniqueSidebarSongs.map((song) => {
+                            const isCurrentSongActive = activeSheet && activeSheet.groupKey === song.groupKey;
+                            return (
+                                <button 
+                                    key={song.groupKey} 
+                                    onClick={() => { 
+                                        setActiveId(song.firstId); 
+                                        if (window.innerWidth < 768) setIsMenuOpen(false); 
+                                    }} 
+                                    className={`w-full text-left px-3 py-2.5 rounded-lg flex items-center justify-between group transition-colors ${isCurrentSongActive ? 'bg-blue-600/20 text-blue-400 font-medium border border-blue-500/30' : 'text-gray-300 hover:bg-gray-800 hover:text-white border border-transparent'}`}
+                                >
+                                    <div className="truncate pr-2 flex flex-col">
+                                        <span className="text-sm">{song.title}</span>
+                                        {song.country && (
+                                            <span className="text-[11px] text-gray-500 font-sans tracking-wide">{song.country}</span>
+                                        )}
+                                    </div>
+                                    <span className="flex items-center gap-1.5 shrink-0">
+                                        {soundsBySong[song.firstId]?.length > 0 && <IconMusic className="w-3.5 h-3.5 text-gray-500" />}
+                                        {song.isFavorite && <IconHeart solid={true} className={`w-4 h-4 ${isCurrentSongActive ? 'text-blue-400' : 'text-red-500 opacity-60 group-hover:opacity-100'}`} />}
+                                    </span>
+                                </button>
+                            );
+                        })
                     )}
                 </div>
-                <div className="p-3 border-t border-gray-800 text-xs font-mono text-gray-500 text-center bg-gray-900 shrink-0">{displayedSheets.length} {displayedSheets.length === 1 ? 'RESULT' : 'RESULTS'}</div>
+                <div className="p-3 border-t border-gray-800 text-xs font-mono text-gray-500 text-center bg-gray-900 shrink-0">{uniqueSidebarSongs.length} {uniqueSidebarSongs.length === 1 ? 'SONG' : 'SONGS'}</div>
             </div>
 
             {/* APP UPDATE NOTIFICATION BANNER */}
@@ -967,7 +1018,9 @@ const App = () => {
                                 <img key={activeSheet.id} src={activeSheet.url} alt={activeSheet.name} className="sheet-image max-w-full max-h-full object-contain rounded shadow-lg" draggable="false" />
 
                                 <div className="absolute top-4 right-4 sm:top-6 sm:right-6 z-20 bg-gray-900/80 backdrop-blur-md px-4 py-2 rounded-xl flex items-center space-x-3 border border-gray-700/50 shadow-2xl">
-                                    <span className="font-semibold text-sm max-w-[150px] sm:max-w-md truncate">{activeSheet.name}</span>
+                                    <span className="font-semibold text-sm max-w-[150px] sm:max-w-md truncate">
+                                        {activeSheet.cleanTitle}{activeSheet.country ? ` (${activeSheet.country})` : ''}
+                                    </span>
                                     <button onClick={(e) => { e.stopPropagation(); toggleFavorite(activeSheet.id); }} className={`p-1.5 rounded-full transition-transform active:scale-90 ${activeSheet.isFavorite ? 'text-red-500 bg-red-500/10' : 'text-gray-400 hover:text-white hover:bg-gray-700'}`}>
                                         <IconHeart solid={activeSheet.isFavorite} className="w-5 h-5" />
                                     </button>
