@@ -55,6 +55,13 @@ const IconClipboardList = ({ className }) => (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
 );
 
+const IconExpand = ({ className }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
+);
+const IconCompress = ({ className }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25"></path></svg>
+);
+
 // --- METRONOME ENGINE ---
 class Metronome {
     constructor() {
@@ -514,6 +521,8 @@ const App = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
     const [viewMode, setViewMode] = useState('viewer');
+    const [isFullscreen, setIsFullscreen] = useState(false);
+    const viewerRef = useRef(null);
 
     const [metroPlaying, setMetroPlaying] = useState(false);
     const [bpm, setBpm] = useState(100);
@@ -734,16 +743,58 @@ const App = () => {
         });
     };
 
+    // --- FULLSCREEN (native Fullscreen API where available, CSS overlay as fallback e.g. iPhone Safari) ---
+    const fsActive = isFullscreen && viewMode === 'viewer';
+
+    const enterFullscreen = () => {
+        setIsFullscreen(true);
+        const el = viewerRef.current;
+        try {
+            if (el?.requestFullscreen) el.requestFullscreen().catch(() => {});
+            else if (el?.webkitRequestFullscreen) el.webkitRequestFullscreen();
+        } catch {}
+    };
+
+    const exitFullscreen = () => {
+        setIsFullscreen(false);
+        try {
+            if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {});
+            else if (document.webkitFullscreenElement && document.webkitExitFullscreen) document.webkitExitFullscreen();
+        } catch {}
+    };
+
+    const toggleFullscreen = () => (isFullscreen ? exitFullscreen() : enterFullscreen());
+
+    // Sync state when the user leaves native fullscreen with Esc / system gesture
+    useEffect(() => {
+        const onChange = () => {
+            if (!(document.fullscreenElement || document.webkitFullscreenElement)) setIsFullscreen(false);
+        };
+        document.addEventListener('fullscreenchange', onChange);
+        document.addEventListener('webkitfullscreenchange', onChange);
+        return () => {
+            document.removeEventListener('fullscreenchange', onChange);
+            document.removeEventListener('webkitfullscreenchange', onChange);
+        };
+    }, []);
+
+    // Leave fullscreen when switching to the map
+    useEffect(() => {
+        if (viewMode !== 'viewer' && isFullscreen) exitFullscreen();
+    }, [viewMode]);
+
     useEffect(() => {
         if (!isAuthenticated) return;
         const handleKeyDown = (e) => {
             if (isMenuOpen || e.target instanceof HTMLInputElement) return;
             if (e.key === 'ArrowRight') goNext();
             if (e.key === 'ArrowLeft') goPrev();
+            if ((e.key === 'f' || e.key === 'F') && viewMode === 'viewer') toggleFullscreen();
+            if (e.key === 'Escape' && isFullscreen) exitFullscreen();
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [isAuthenticated, activeIndex, displayedSheets.length, isMenuOpen]);
+    }, [isAuthenticated, activeIndex, displayedSheets.length, isMenuOpen, isFullscreen, viewMode]);
 
     const handleTouchStart = (e) => { touchStartX.current = e.targetTouches[0].clientX; };
     const handleTouchMove = (e) => { touchEndX.current = e.targetTouches[0].clientX; };
@@ -1001,7 +1052,11 @@ const App = () => {
             )}
 
             {/* MAIN CONTENT AREA */}
-            <div className="flex-1 relative flex items-center justify-center overflow-hidden bg-black outline-none min-h-0 w-full" tabIndex={0}>
+            <div
+                ref={viewerRef}
+                className={`${fsActive ? 'fixed inset-0 z-[70] h-[100dvh] w-screen' : 'flex-1 relative min-h-0 w-full'} flex items-center justify-center overflow-hidden bg-black outline-none`}
+                tabIndex={0}
+            >
                 {displayedSheets.length === 0 ? (
                     <div className="text-gray-500 flex flex-col items-center">
                         <IconMusic className="w-16 h-16 mb-4 opacity-20" />
@@ -1027,13 +1082,20 @@ const App = () => {
                         </div>
 
                         {activeSheet && (
-                            <div className="relative w-full h-full flex items-center justify-center p-2 sm:p-4" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
+                            <div className={`relative w-full h-full flex items-center justify-center ${fsActive ? 'p-0' : 'p-2 sm:p-4'}`} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
                                 <img key={activeSheet.id} src={activeSheet.url} alt={activeSheet.name} className="sheet-image max-w-full max-h-full object-contain rounded shadow-lg" draggable="false" />
 
                                 <div className="absolute top-4 right-4 sm:top-6 sm:right-6 z-20 bg-gray-900/80 backdrop-blur-md px-4 py-2 rounded-xl flex items-center space-x-3 border border-gray-700/50 shadow-2xl">
                                     <span className="font-semibold text-sm max-w-[150px] sm:max-w-md truncate">
                                         {activeSheet.cleanTitle}{activeSheet.country ? ` (${activeSheet.country})` : ''}
                                     </span>
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); toggleFullscreen(); }}
+                                        title={fsActive ? 'Exit full screen (Esc)' : 'Full screen (F)'}
+                                        className="p-1.5 rounded-full text-gray-400 hover:text-white hover:bg-gray-700 transition-transform active:scale-90"
+                                    >
+                                        {fsActive ? <IconCompress className="w-5 h-5" /> : <IconExpand className="w-5 h-5" />}
+                                    </button>
                                     <button onClick={(e) => { e.stopPropagation(); toggleFavorite(activeSheet.id); }} className={`p-1.5 rounded-full transition-transform active:scale-90 ${activeSheet.isFavorite ? 'text-red-500 bg-red-500/10' : 'text-gray-400 hover:text-white hover:bg-gray-700'}`}>
                                         <IconHeart solid={activeSheet.isFavorite} className="w-5 h-5" />
                                     </button>
